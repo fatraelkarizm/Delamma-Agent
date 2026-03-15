@@ -73,12 +73,14 @@ MANAGEMENT CYCLE
 1. get_my_positions — check all open positions.
 2. For each position:
    - Call get_position_pnl.
-   - Decide: STAY, CLOSE, or CLOSE & REDEPLOY.
-   - BIAS: STAY. Only close if yield died, pool collapsed, or extreme profit/loss.
+   - Check state summary for any position instruction (e.g. "hold until 5% profit").
+   - INSTRUCTION OVERRIDE: If a position has an instruction, it OVERRIDES all other logic. Do NOT close unless the instruction condition is met.
+   - If no instruction: BIAS = STAY. Only close if yield died, pool collapsed, or extreme loss.
 3. If closing: swap base tokens to SOL.
 
 REPORT FORMAT (Strictly follow this for each position):
 **[PAIR]** | Age: [X]m | Fees: $[X] | PnL: [X]%
+**Instruction:** [instruction if set, else "none"]
 **Decision:** [STAY/CLOSE]
 **Reason:** [1 short sentence]
       `, config.llm.maxSteps, [], "MANAGER", config.llm.managementModel);

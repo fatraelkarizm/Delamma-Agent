@@ -11,6 +11,7 @@ import {
 import { getWalletBalances, swapToken } from "./wallet.js";
 import { studyTopLPers } from "./study.js";
 import { addLesson, clearAllLessons, clearPerformance, removeLessonsByKeyword } from "../lessons.js";
+import { setPositionInstruction } from "../state.js";
 import { config, reloadScreeningThresholds } from "../config.js";
 import fs from "fs";
 import path from "path";
@@ -41,6 +42,11 @@ const toolMap = {
   swap_token: swapToken,
   get_top_lpers: studyTopLPers,
   study_top_lpers: studyTopLPers,
+  set_position_note: ({ position_address, instruction }) => {
+    const ok = setPositionInstruction(position_address, instruction || null);
+    if (!ok) return { error: `Position ${position_address} not found in state` };
+    return { saved: true, position: position_address, instruction: instruction || null };
+  },
   add_lesson: ({ rule, tags }) => { addLesson(rule, tags || []); return { saved: true, rule }; },
   clear_lessons: ({ mode, keyword }) => {
     if (mode === "all") {

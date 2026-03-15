@@ -473,6 +473,36 @@ Modes:
   {
     type: "function",
     function: {
+      name: "set_position_note",
+      description: `Save a persistent instruction for a position that ALL future management cycles will respect.
+Use this immediately whenever the user gives a specific instruction about a position:
+- "hold until 5% profit"
+- "don't close before fees hit $10"
+- "close if it goes out of range"
+- "hold for at least 2 hours"
+
+The instruction is stored in state.json and injected into every management cycle prompt.
+Pass null or empty string to clear an existing instruction.`,
+      parameters: {
+        type: "object",
+        properties: {
+          position_address: {
+            type: "string",
+            description: "The position address to attach the instruction to"
+          },
+          instruction: {
+            type: "string",
+            description: "The instruction to persist (e.g. 'hold until PnL >= 5%'). Pass empty string to clear."
+          }
+        },
+        required: ["position_address", "instruction"]
+      }
+    }
+  },
+
+  {
+    type: "function",
+    function: {
       name: "add_lesson",
       description: `Save a lesson to the agent's permanent memory.
 Use after studying top LPers or observing a pattern worth remembering.

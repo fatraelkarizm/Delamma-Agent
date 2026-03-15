@@ -185,6 +185,20 @@ export function recordRebalance(old_position, new_position) {
 }
 
 /**
+ * Set a persistent instruction for a position (e.g. "hold until 5% profit").
+ * Overwrites any previous instruction. Pass null to clear.
+ */
+export function setPositionInstruction(position_address, instruction) {
+  const state = load();
+  const pos = state.positions[position_address];
+  if (!pos) return false;
+  pos.instruction = instruction || null;
+  save(state);
+  log("state", `Position ${position_address} instruction set: ${instruction}`);
+  return true;
+}
+
+/**
  * Get all tracked positions (optionally filter open-only).
  */
 export function getTrackedPositions(openOnly = false) {
@@ -225,6 +239,7 @@ export function getStateSummary() {
       total_fees_claimed_usd: p.total_fees_claimed_usd,
       initial_fee_tvl_24h: p.initial_fee_tvl_24h,
       rebalance_count: p.rebalance_count,
+      instruction: p.instruction || null,
     })),
     last_updated: state.lastUpdated,
     recent_events: (state.recentEvents || []).slice(-10),
