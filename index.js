@@ -139,11 +139,7 @@ SCREENING CYCLE — DEPLOY ONLY
 3. get_top_candidates, pick the best one, and call study_top_lpers.
 4. Call check_smart_wallets_on_pool for the chosen pool. Smart wallet presence = strong confidence boost. No presence = neutral, rely on fundamentals.
 5. If the pool is high-quality: get_active_bin and deploy_position.
-6. After deploying — set management interval based on pool volatility (MANDATORY):
-   - volatility >= 5  → update_config management.managementIntervalMin = 3
-   - volatility 2–5   → update_config management.managementIntervalMin = 5
-   - volatility < 2   → update_config management.managementIntervalMin = 10
-7. Report result and reasoning including smart wallet signal and interval set.
+6. Report result and reasoning including smart wallet signal and interval set.
       `, config.llm.maxSteps, [], "SCREENER", config.llm.screeningModel);
       screenReport = content;
     } catch (error) {
