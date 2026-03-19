@@ -162,7 +162,7 @@ If all positions STAY and no fees to claim, just write the report with no tool c
 REPORT FORMAT (one per position):
 **[PAIR]** | Age: [X]m | Fees: $[X] | PnL: [X]%
 **Rule:** [number or "none"] | **Decision:** STAY/CLOSE | **Reason:** [1 sentence]
-      `, config.llm.maxSteps, [], "MANAGER", config.llm.managementModel, 512);
+      `, config.llm.maxSteps, [], "MANAGER", config.llm.managementModel, 2048);
       mgmtReport = content;
     } catch (error) {
       log("cron_error", `Management cycle failed: ${error.message}`);
