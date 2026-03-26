@@ -1,0 +1,78 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  engineType = "library"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// Tracks every bot event: deploy, close, claim, rebalance
+model TradeEvent {
+  id           Int      @id @default(autoincrement())
+  ts           DateTime @default(now())
+  action       String   // deploy | close | claim | rebalance
+  position     String   // position address
+  pool         String   // pool address
+  pool_name    String?
+  strategy     String?
+  amount_sol   Float?   // SOL deployed
+  pnl_usd      Float?   // PNL at close
+  fees_usd     Float?   // fees claimed
+  reason       String?  // close reason
+  raw          Json?    // full metadata
+
+  @@map("trade_events")
+}
+
+// Mirror of open positions
+model Position {
+  id                     Int       @id @default(autoincrement())
+  position               String    @unique
+  pool                   String
+  pool_name              String?
+  strategy               String?
+  amount_sol             Float?
+  initial_value_usd      Float?
+  total_fees_claimed_usd Float?    @default(0)
+  rebalance_count        Int?      @default(0)
+  volatility             Float?
+  fee_tvl_ratio          Float?
+  organic_score          Int?
+  deployed_at            DateTime?
+  closed                 Boolean   @default(false)
+  closed_at              DateTime?
+  out_of_range_since     DateTime?
+  last_claim_at          DateTime?
+  updated_at             DateTime  @updatedAt
+
+  @@map("positions")
+}
+
+// Bot heartbeat — one row, overwritten every tick
+model BotStatus {
+  id           Int      @id @default(1)
+  last_seen    DateTime @default(now())
+  is_live      Boolean  @default(false)
+  dry_run      Boolean  @default(false)
+  open_positions Int    @default(0)
+  version      String?
+
+  @@map("bot_status")
+}
+
+// Daily rolled-up PNL for charting the yield chart
+model DailyPnl {
+  id           Int      @id @default(autoincrement())
+  date         String   @unique // YYYY-MM-DD
+  pnl_usd      Float    @default(0)
+  fees_usd     Float    @default(0)
+  trades       Int      @default(0)
+  wins         Int      @default(0)
+  losses       Int      @default(0)
+
+  @@map("daily_pnl")
+}

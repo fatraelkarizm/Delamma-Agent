@@ -1,0 +1,26 @@
+.dashboardContainer {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  gap: 1.5rem;
+}
+
+.middleRow {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.chartSection { flex: 2.2; }
+.metricsSection { flex: 1; }
+
+.bottomRow {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.tableSection { flex: 2.2; }
+.activitySection { flex: 1; }
+
+@media (max-width: 1100px) {
+  .middleRow, .bottomRow { flex-direction: column; }
+}

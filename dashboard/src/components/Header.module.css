@@ -1,0 +1,147 @@
+.header {
+  height: var(--header-height);
+  padding: 0 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: var(--bg-color);
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1rem;
+}
+
+.muted {
+  color: var(--text-muted);
+}
+
+.separator {
+  color: var(--border-color);
+}
+
+.current {
+  color: var(--text-main);
+  font-weight: 600;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.search {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 0.75rem;
+  color: var(--text-muted);
+}
+
+.searchInput {
+  padding: 0.5rem 0.5rem 0.5rem 2.5rem;
+  border-radius: 20px;
+  border: 1px solid var(--border-color);
+  background-color: var(--card-bg);
+  color: var(--text-main);
+  outline: none;
+  width: 200px;
+  transition: width 0.2s ease, border-color 0.2s ease;
+  font-family: inherit;
+}
+
+.searchInput:focus {
+  width: 250px;
+  border-color: var(--accent-light);
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1);
+}
+
+.shortcut {
+  position: absolute;
+  right: 0.5rem;
+  font-size: 0.65rem;
+  background: var(--bg-color);
+  padding: 0.1rem 0.3rem;
+  border-radius: 4px;
+  color: var(--text-muted);
+  border: 1px solid var(--border-color);
+}
+
+.actionBtn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: #3f3f46;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.875rem;
+  transition: background-color 0.2s ease;
+}
+
+.actionBtn:hover {
+  background-color: #27272a;
+}
+
+.iconButtons {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.iconBtn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease;
+}
+
+.iconBtn:hover {
+  background-color: var(--border-color);
+}
+
+.themeToggle {
+  display: flex;
+  background-color: var(--border-color);
+  border-radius: 20px;
+  padding: 2px;
+}
+
+.themeBtn {
+  background: none;
+  border: none;
+  padding: 0.4rem;
+  border-radius: 50%;
+  cursor: pointer;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.themeBtn.active {
+  background-color: var(--card-bg);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  color: var(--text-main);
+}
