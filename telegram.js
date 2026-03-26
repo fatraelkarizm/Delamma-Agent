@@ -45,12 +45,25 @@ export function isEnabled() {
 export async function sendMessage(text) {
   if (!TOKEN || !chatId) return;
   try {
+    // Convert basic markdown to Telegram HTML
+    let html = String(text)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/^###\s+(.*$)/gim, '<b>$1</b>')
+      .replace(/^##\s+(.*$)/gim, '<b>$1</b>')
+      .replace(/^#\s+(.*$)/gim, '<b>$1</b>')
+      .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')
+      .replace(/`(.*?)`/g, '<code>$1</code>')
+      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
+
     const res = await fetch(`${BASE}/sendMessage`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         chat_id: chatId,
-        text: String(text).slice(0, 4096),
+        text: html.slice(0, 4096),
+        parse_mode: "HTML",
       }),
     });
     if (!res.ok) {
