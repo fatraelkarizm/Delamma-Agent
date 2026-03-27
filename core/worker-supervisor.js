@@ -5,6 +5,7 @@ import {
   completeWorkerControlRequest,
   listWorkerControlRequests,
   listWorkerRuntimeState,
+  recordWorkerActivity,
   requeueWorkerControlRequest,
 } from "../lib/db.js";
 import { repoPath } from "../lib/paths.js";
@@ -107,6 +108,15 @@ export async function processSupervisorRequests({ limit = 5 } = {}) {
           walletId: claimed.wallet_id,
           payload: claimed.payload || {},
         });
+        await recordWorkerActivity({
+          tenant_id: claimed.tenant_id,
+          wallet_id: claimed.wallet_id,
+          worker_id: result.worker_id,
+          level: "info",
+          event_type: "worker_launched",
+          message: `Launched worker ${result.worker_id}`,
+          payload: { request_id: claimed.id, pid: result.pid, command: claimed.command },
+        });
       }
 
       if (claimed.command === "restart_worker") {
@@ -163,6 +173,20 @@ export async function processSupervisorRequests({ limit = 5 } = {}) {
             }
           }
 
+          await recordWorkerActivity({
+            tenant_id: claimed.tenant_id,
+            wallet_id: claimed.wallet_id,
+            worker_id: existingWorker.worker_id,
+            level: "warn",
+            event_type: "worker_restart_waiting_shutdown",
+            message: `Restart queued for ${existingWorker.worker_id}; waiting for shutdown`,
+            payload: {
+              request_id: claimed.id,
+              target_worker_id: existingWorker.worker_id,
+              shutdown_requeued: shouldQueueShutdown,
+            },
+          });
+
           handled.push({
             id: claimed.id,
             command: claimed.command,
@@ -177,6 +201,15 @@ export async function processSupervisorRequests({ limit = 5 } = {}) {
           tenantId: claimed.tenant_id,
           walletId: claimed.wallet_id,
           payload: claimed.payload || {},
+        });
+        await recordWorkerActivity({
+          tenant_id: claimed.tenant_id,
+          wallet_id: claimed.wallet_id,
+          worker_id: result.worker_id,
+          level: "info",
+          event_type: "worker_restarted",
+          message: `Restart launched replacement worker ${result.worker_id}`,
+          payload: { request_id: claimed.id, pid: result.pid, previous_worker_id: payload.previous_worker_id || null },
         });
       }
 
@@ -197,6 +230,15 @@ export async function processSupervisorRequests({ limit = 5 } = {}) {
         });
       }
     } catch (error) {
+      await recordWorkerActivity({
+        tenant_id: claimed.tenant_id,
+        wallet_id: claimed.wallet_id,
+        worker_id: claimed.worker_id || workerId,
+        level: "error",
+        event_type: "supervisor_request_failed",
+        message: `Supervisor failed ${claimed.command} for ${claimed.tenant_id}/${claimed.wallet_id}`,
+        payload: { request_id: claimed.id, command: claimed.command, error: error.message },
+      });
       await completeWorkerControlRequest({
         id: claimed.id,
         worker_id: workerId,

@@ -132,6 +132,21 @@ Processes pending launch_worker and restart_worker requests once.
 ### meridian supervisor run
 Runs a lightweight supervisor loop that spawns workers for pending launch_worker and restart_worker requests.
 
+### meridian telegram run
+Runs the Telegram control-plane gateway.
+
+### meridian telegram bindings [--chat-id <id>]
+Lists Telegram chat bindings.
+
+### meridian telegram bind --chat-id <id> --tenant-id <id> --wallet-id <id>
+Binds a Telegram chat to a wallet scope for notifications and control.
+
+### meridian telegram unbind --chat-id <id> [--tenant-id <id>] [--wallet-id <id>]
+Removes Telegram chat bindings.
+
+### meridian telegram session --chat-id <id> --tenant-id <id> --wallet-id <id>
+Sets the active Telegram session scope for a chat.
+
 ## Flags
 --dry-run     Skip all on-chain transactions
 --silent      Suppress Telegram notifications for this run
@@ -177,6 +192,7 @@ const { values: flags } = parseArgs({
     overwrite:    { type: "boolean" },
     store:        { type: "string" },
     command:      { type: "string" },
+    "chat-id":    { type: "string" },
   },
   allowPositionals: true,
   strict: false,
@@ -508,6 +524,114 @@ switch (subcommand) {
     }
 
     die(`Unknown supervisor subcommand: ${sub2}. Use: once, run`);
+    break;
+  }
+
+  case "telegram": {
+    const chatId = flags["chat-id"] || null;
+
+    if (sub2 === "run" || !sub2) {
+      const { isEnabled: telegramEnabled } = await import("./core/telegram.js");
+      if (!telegramEnabled()) {
+        die("TELEGRAM_BOT_TOKEN is not configured");
+      }
+
+      const { startTelegramRuntime } = await import("./core/telegram-runtime.js");
+      const { createWorkerContext, formatWorkerLabel } = await import("./core/tenant-context.js");
+      const workerContext = createWorkerContext({
+        tenantId: flags["tenant-id"] || process.env.TENANT_ID || "local",
+        walletId: flags["wallet-id"] || process.env.WALLET_ID || process.env.WALLET_ADDRESS || "primary",
+        workerId: process.env.WORKER_ID || "telegram-gateway",
+        mode: "telegram",
+        channel: "telegram-gateway",
+      });
+      const workerRuntime = {
+        context: workerContext,
+        label: formatWorkerLabel(workerContext),
+        supportsLocalExecution: false,
+        isExecutionBusy() {
+          return false;
+        },
+        runInScope(fn) {
+          return fn();
+        },
+      };
+      const runtimeState = {
+        busy: false,
+        sessionHistory: [],
+        appendHistory() {},
+      };
+
+      keepProcessAlive = true;
+      process.stderr.write(`[meridian] Telegram gateway running for ${workerRuntime.label}...\n`);
+      startTelegramRuntime({ runtimeState, workerRuntime });
+      await new Promise(() => {});
+    }
+
+    if (sub2 === "bindings") {
+      const { listTelegramBindings } = await import("./lib/telegram-state.js");
+      out({
+        bindings: listTelegramBindings({ chatId }),
+      });
+      break;
+    }
+
+    if (sub2 === "bind") {
+      if (!chatId || !flags["tenant-id"] || !flags["wallet-id"]) {
+        die("Usage: meridian telegram bind --chat-id <id> --tenant-id <id> --wallet-id <id>");
+      }
+
+      const { bindTelegramChat, upsertTelegramSession } = await import("./lib/telegram-state.js");
+      const binding = bindTelegramChat({
+        chatId,
+        tenantId: flags["tenant-id"],
+        walletId: flags["wallet-id"],
+        notificationsEnabled: true,
+        metadata: { source: "cli" },
+      });
+      const session = upsertTelegramSession({
+        chatId,
+        tenantId: flags["tenant-id"],
+        walletId: flags["wallet-id"],
+        metadata: { updated_by: "cli" },
+      });
+
+      out({ binding, session });
+      break;
+    }
+
+    if (sub2 === "unbind") {
+      if (!chatId) {
+        die("Usage: meridian telegram unbind --chat-id <id> [--tenant-id <id>] [--wallet-id <id>]");
+      }
+
+      const { unbindTelegramChat } = await import("./lib/telegram-state.js");
+      out(unbindTelegramChat({
+        chatId,
+        tenantId: flags["tenant-id"] || null,
+        walletId: flags["wallet-id"] || null,
+      }));
+      break;
+    }
+
+    if (sub2 === "session") {
+      if (!chatId || !flags["tenant-id"] || !flags["wallet-id"]) {
+        die("Usage: meridian telegram session --chat-id <id> --tenant-id <id> --wallet-id <id>");
+      }
+
+      const { upsertTelegramSession } = await import("./lib/telegram-state.js");
+      out({
+        session: upsertTelegramSession({
+          chatId,
+          tenantId: flags["tenant-id"],
+          walletId: flags["wallet-id"],
+          metadata: { updated_by: "cli" },
+        }),
+      });
+      break;
+    }
+
+    die("Unknown telegram subcommand. Use: run, bindings, bind, unbind, session");
     break;
   }
 

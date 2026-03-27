@@ -28,6 +28,7 @@ export default function WorkerRoster({ runtimeState }: { runtimeState: any }) {
   const workers = runtimeState?.workers || [];
   const leases = runtimeState?.leases || [];
   const requests = runtimeState?.requests || [];
+  const events = runtimeState?.events || [];
 
   return (
     <section className={styles.panel}>
@@ -119,6 +120,33 @@ export default function WorkerRoster({ runtimeState }: { runtimeState: any }) {
                   <span className={styles.time}>
                     {request.completed_at ? `done ${formatTs(request.completed_at)}` : request.claimed_at ? `claimed ${formatTs(request.claimed_at)}` : "pending"}
                   </span>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
+      <div className={styles.card}>
+        <div className={styles.cardHeader}>
+          <h4>Worker Events</h4>
+          <span>{events.length}</span>
+        </div>
+        <div className={styles.list}>
+          {events.length === 0 ? (
+            <p className={styles.empty}>No worker events recorded yet.</p>
+          ) : (
+            events.map((event: any) => (
+              <div key={String(event.id)} className={styles.item}>
+                <div>
+                  <p className={styles.primary}>{event.event_type}</p>
+                  <p className={styles.secondary}>{event.message}</p>
+                </div>
+                <div className={styles.meta}>
+                  <span className={`${styles.requestBadge} ${badgeClass(event.level === "error" ? "failed" : event.level === "warn" ? "pending" : "completed")}`}>
+                    {event.level || "info"}
+                  </span>
+                  <span className={styles.time}>{formatTs(event.created_at)}</span>
                 </div>
               </div>
             ))

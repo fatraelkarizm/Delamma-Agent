@@ -5,6 +5,7 @@ import { maybeRunMissedBriefing as maybeRunMissedBriefingService } from "./brief
 import { startShellRuntime } from "./shell-runtime.js";
 import { startTelegramRuntime } from "./telegram-runtime.js";
 import { getDefaultWorkerRuntime } from "./worker-runtime.js";
+import { isEnabled as telegramEnabled } from "./telegram.js";
 
 const DEPLOY = config.management.deployAmountSol;
 
@@ -31,6 +32,8 @@ export async function runRuntimeApp({
   workerRuntime = getDefaultWorkerRuntime(),
 } = {}) {
   const runScoped = (fn) => workerRuntime.runInScope ? workerRuntime.runInScope(fn) : fn();
+  const telegramRuntimeMode = String(process.env.TELEGRAM_RUNTIME_MODE || "interactive").toLowerCase();
+  const shouldStartBackgroundTelegram = !isTTY && telegramRuntimeMode === "always";
 
   if (!isTTY) {
     log("startup", "Non-TTY mode - starting cron cycles immediately.");
@@ -45,10 +48,18 @@ STARTUP CHECK
     } catch (e) {
       log("startup_error", e.message);
     }
+
+    if (shouldStartBackgroundTelegram && telegramEnabled()) {
+      const runtimeState = createRuntimeState();
+      startTelegramRuntime({ runtimeState, workerRuntime });
+      log("startup", "Telegram gateway started in background mode.");
+    }
     return;
   }
 
   const runtimeState = createRuntimeState();
   const { refreshPrompt } = await startShellRuntime({ shutdown, runtimeState, workerRuntime });
-  startTelegramRuntime({ runtimeState, refreshPrompt, workerRuntime });
+  if (telegramEnabled()) {
+    startTelegramRuntime({ runtimeState, refreshPrompt, workerRuntime });
+  }
 }

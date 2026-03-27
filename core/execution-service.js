@@ -3,6 +3,7 @@ import {
   claimNextWorkerControlRequest,
   completeWorkerControlRequest,
   heartbeat,
+  recordWorkerActivity,
 } from "../lib/db.js";
 import { log } from "../lib/logger.js";
 import { createWorkerStateStore, getTrackedPosition, getTrackedPositions } from "../lib/state.js";
@@ -157,6 +158,15 @@ export function createExecutionService(
 
   async function shutdownProcess(reason = "shutdown") {
     workerLog("shutdown", `Process shutdown requested: ${reason}`);
+    await recordWorkerActivity({
+      tenant_id: workerContext.tenantId,
+      wallet_id: workerContext.walletId,
+      worker_id: workerContext.workerId,
+      level: "warn",
+      event_type: "worker_shutdown_requested",
+      message: `Worker shutdown requested: ${reason}`,
+      payload: { reason },
+    });
     await destroy();
     process.exit(0);
   }
@@ -192,6 +202,15 @@ export function createExecutionService(
       case "shutdown_worker": {
         const targetWorkerId = request?.payload?.target_worker_id || null;
         if (targetWorkerId && targetWorkerId !== workerContext.workerId) {
+          await recordWorkerActivity({
+            tenant_id: workerContext.tenantId,
+            wallet_id: workerContext.walletId,
+            worker_id: workerContext.workerId,
+            level: "info",
+            event_type: "shutdown_skipped",
+            message: `Ignored shutdown request targeting ${targetWorkerId}`,
+            payload: { target_worker_id: targetWorkerId, request_id: request.id },
+          });
           return {
             command,
             skipped: true,
@@ -227,6 +246,15 @@ export function createExecutionService(
 
       processed += 1;
       workerLog("control", `Processing control request #${request.id}: ${request.command}`);
+      await recordWorkerActivity({
+        tenant_id: workerContext.tenantId,
+        wallet_id: workerContext.walletId,
+        worker_id: workerContext.workerId,
+        level: "info",
+        event_type: "control_request_claimed",
+        message: `Claimed control request #${request.id}: ${request.command}`,
+        payload: { request_id: request.id, command: request.command },
+      });
 
       try {
         const result = await withWorkerScope(() => executeControlRequest(request));
@@ -236,6 +264,15 @@ export function createExecutionService(
           status: "completed",
           result,
         });
+        await recordWorkerActivity({
+          tenant_id: workerContext.tenantId,
+          wallet_id: workerContext.walletId,
+          worker_id: workerContext.workerId,
+          level: "info",
+          event_type: "control_request_completed",
+          message: `Completed control request #${request.id}: ${request.command}`,
+          payload: { request_id: request.id, command: request.command, result },
+        });
       } catch (error) {
         workerLog("control_error", `Control request #${request.id} failed: ${error.message}`);
         await completeWorkerControlRequest({
@@ -244,6 +281,15 @@ export function createExecutionService(
           status: "failed",
           result: {},
           error: error.message,
+        });
+        await recordWorkerActivity({
+          tenant_id: workerContext.tenantId,
+          wallet_id: workerContext.walletId,
+          worker_id: workerContext.workerId,
+          level: "error",
+          event_type: "control_request_failed",
+          message: `Control request #${request.id} failed: ${request.command}`,
+          payload: { request_id: request.id, command: request.command, error: error.message },
         });
       }
     }

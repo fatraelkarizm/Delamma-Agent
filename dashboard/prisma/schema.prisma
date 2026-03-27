@@ -181,3 +181,18 @@ model WorkerControlRequest {
   @@index([tenant_id, wallet_id, status, created_at])
   @@map("worker_control_requests")
 }
+
+model WorkerActivityEvent {
+  id         BigInt   @id @default(autoincrement())
+  tenant_id  String
+  wallet_id  String
+  worker_id  String?
+  level      String   @default("info")
+  event_type String
+  message    String
+  payload    Json?
+  created_at DateTime @default(now())
+
+  @@index([tenant_id, wallet_id, created_at(sort: Desc)])
+  @@map("worker_activity_events")
+}

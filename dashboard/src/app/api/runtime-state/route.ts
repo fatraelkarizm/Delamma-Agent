@@ -11,6 +11,7 @@ export async function GET(req: Request) {
     const scope = getScopeFromSearchParams(searchParams);
     const workerLimit = Math.min(20, Math.max(1, Number(searchParams.get("worker_limit") || 10)));
     const requestLimit = Math.min(30, Math.max(1, Number(searchParams.get("request_limit") || 12)));
+    const eventLimit = Math.min(30, Math.max(1, Number(searchParams.get("event_limit") || 12)));
 
     const scopeWhere = [];
     const scopeParams: Array<string | number> = [];
@@ -27,6 +28,7 @@ export async function GET(req: Request) {
 
     const workerParams = [...scopeParams, workerLimit];
     const requestParams = [...scopeParams, requestLimit];
+    const eventParams = [...scopeParams, eventLimit];
 
     const workers = await prisma.$queryRawUnsafe<any[]>(
       `SELECT worker_id, tenant_id, wallet_id, mode, channel, status, metadata, registered_at, last_seen_at, lease_expires_at
@@ -54,13 +56,23 @@ export async function GET(req: Request) {
       ...requestParams,
     ).catch(() => []);
 
+    const events = await prisma.$queryRawUnsafe<any[]>(
+      `SELECT id, tenant_id, wallet_id, worker_id, level, event_type, message, payload, created_at
+       FROM worker_activity_events
+       ${scopeWhere.length ? `WHERE ${scopeWhere.join(" AND ")}` : ""}
+       ORDER BY created_at DESC
+       LIMIT $${eventParams.length}`,
+      ...eventParams,
+    ).catch(() => []);
+
     return NextResponse.json({
       scope,
       workers,
       leases,
       requests,
+      events,
     });
   } catch (err: any) {
-    return NextResponse.json({ workers: [], leases: [], requests: [], error: err.message }, { status: 200 });
+    return NextResponse.json({ workers: [], leases: [], requests: [], events: [], error: err.message }, { status: 200 });
   }
 }
