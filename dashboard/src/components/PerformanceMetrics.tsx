@@ -5,11 +5,14 @@ import { MoreHorizontal, CheckCircle, Clock, Play, RefreshCcw, Square, Radar, Sh
 import styles from "./PerformanceMetrics.module.css";
 
 const CONTROL_ACTIONS = [
+  { command: "launch_worker", label: "Launch", icon: Play },
+  { command: "restart_worker", label: "Restart Worker", icon: RefreshCcw },
   { command: "start_cron", label: "Start", icon: Play },
-  { command: "restart_cron", label: "Restart", icon: RefreshCcw },
+  { command: "restart_cron", label: "Restart Cron", icon: RefreshCcw },
   { command: "stop_cron", label: "Stop", icon: Square },
   { command: "run_management_cycle", label: "Manage", icon: Shield },
   { command: "run_screening_cycle", label: "Screen", icon: Radar },
+  { command: "shutdown_worker", label: "Shutdown", icon: Square },
 ];
 
 export default function PerformanceMetrics({
@@ -135,7 +138,7 @@ export default function PerformanceMetrics({
         </button>
 
         <p className={styles.controlHint}>
-          Requests are picked up by the active worker for this scope. If no worker is online, requests stay pending.
+          Worker commands are picked up by the active worker. Launch and restart requests need the supervisor loop running on this host.
         </p>
 
         {feedback ? <div className={styles.feedback}>{feedback}</div> : null}
@@ -149,7 +152,7 @@ export default function PerformanceMetrics({
                 <div>
                   <p className={styles.requestCommand}>{request.command}</p>
                   <p className={styles.requestMeta}>
-                    {request.requested_by || "unknown"} · {request.status}
+                    {request.requested_by || "unknown"} | {request.status}
                   </p>
                 </div>
                 <span className={`${styles.requestBadge} ${badgeClass(request.status)}`}>

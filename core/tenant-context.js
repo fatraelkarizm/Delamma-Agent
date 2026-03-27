@@ -5,11 +5,11 @@ function cleanValue(value, fallback) {
 }
 
 export function createWorkerContext({
-  tenantId = "local",
-  walletId = process.env.WALLET_ADDRESS || "primary",
+  tenantId = process.env.TENANT_ID || "local",
+  walletId = process.env.WALLET_ID || process.env.WALLET_ADDRESS || "primary",
   workerId,
-  mode = "local",
-  channel = "runtime",
+  mode = process.env.WORKER_MODE || "local",
+  channel = process.env.WORKER_CHANNEL || "runtime",
   metadata = {},
 } = {}) {
   const normalizedTenantId = cleanValue(tenantId, "local");

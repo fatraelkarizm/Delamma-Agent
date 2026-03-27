@@ -6,9 +6,12 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 const ALLOWED_COMMANDS = new Set([
+  "launch_worker",
+  "restart_worker",
   "start_cron",
   "restart_cron",
   "stop_cron",
+  "shutdown_worker",
   "run_management_cycle",
   "run_screening_cycle",
   "run_briefing",

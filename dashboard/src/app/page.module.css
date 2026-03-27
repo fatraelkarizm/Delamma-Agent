@@ -78,6 +78,10 @@
   gap: 1.5rem;
 }
 
+.runtimeRow {
+  display: flex;
+}
+
 .chartSection { flex: 2.2; }
 .metricsSection { flex: 1; }
 

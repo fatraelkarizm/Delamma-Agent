@@ -27,6 +27,15 @@ import { runWithRuntimeScope } from "./runtime-scope.js";
 const DEFAULT_LEASE_METADATA = { scope: "wallet-runtime" };
 const MAX_CONTROL_REQUESTS_PER_TICK = 3;
 const CONTROL_POLL_INTERVAL_MS = 15_000;
+const WORKER_CONTROL_COMMANDS = [
+  "start_cron",
+  "restart_cron",
+  "stop_cron",
+  "run_management_cycle",
+  "run_screening_cycle",
+  "run_briefing",
+  "shutdown_worker",
+];
 
 export function createExecutionService(
   workerContext = createWorkerContext(),
@@ -146,6 +155,12 @@ export function createExecutionService(
     }
   }
 
+  async function shutdownProcess(reason = "shutdown") {
+    workerLog("shutdown", `Process shutdown requested: ${reason}`);
+    await destroy();
+    process.exit(0);
+  }
+
   async function executeControlRequest(request) {
     const command = request.command;
 
@@ -174,6 +189,23 @@ export function createExecutionService(
       case "run_briefing":
         await withWorkerScope(() => runBriefing());
         return { command, done: true };
+      case "shutdown_worker": {
+        const targetWorkerId = request?.payload?.target_worker_id || null;
+        if (targetWorkerId && targetWorkerId !== workerContext.workerId) {
+          return {
+            command,
+            skipped: true,
+            reason: "target_worker_mismatch",
+            target_worker_id: targetWorkerId,
+            worker_id: workerContext.workerId,
+          };
+        }
+
+        setTimeout(() => {
+          shutdownProcess("control_request").catch(() => process.exit(1));
+        }, 250);
+        return { command, shutting_down: true };
+      }
       default:
         throw new Error(`Unsupported control command: ${command}`);
     }
@@ -188,6 +220,7 @@ export function createExecutionService(
         tenant_id: workerContext.tenantId,
         wallet_id: workerContext.walletId,
         worker_id: workerContext.workerId,
+        commands: WORKER_CONTROL_COMMANDS,
       });
 
       if (!request) break;
@@ -611,11 +644,15 @@ Summarize the current portfolio health, total fees earned, and performance of al
 
 const defaultExecutionService = createExecutionService(
   createWorkerContext({
-    tenantId: "local",
-    walletId: process.env.WALLET_ADDRESS || "primary",
-    workerId: "local-default",
-    mode: process.stdin.isTTY ? "interactive" : "background",
-    channel: "default-runtime",
+    tenantId: process.env.TENANT_ID || "local",
+    walletId: process.env.WALLET_ID || process.env.WALLET_ADDRESS || "primary",
+    workerId: process.env.WORKER_ID || undefined,
+    mode: process.env.WORKER_MODE || (process.stdin.isTTY ? "interactive" : "background"),
+    channel: process.env.WORKER_CHANNEL || "default-runtime",
+    metadata: {
+      pid: process.pid,
+      parent_pid: process.env.WORKER_PARENT_PID || null,
+    },
   })
 );
 

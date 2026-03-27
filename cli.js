@@ -121,9 +121,16 @@ Restores wallet-scoped JSON stores from PostgreSQL snapshots back into local dat
 
 ### meridian control request --tenant-id <id> --wallet-id <id> --command <cmd>
 Queues a control-plane command for a worker scope.
+Supported examples: launch_worker, restart_worker, start_cron, restart_cron, stop_cron, shutdown_worker, run_management_cycle, run_screening_cycle, run_briefing
 
 ### meridian control list [--tenant-id <id>] [--wallet-id <id>] [--limit 20]
 Lists recent control-plane requests.
+
+### meridian supervisor once
+Processes pending launch_worker and restart_worker requests once.
+
+### meridian supervisor run
+Runs a lightweight supervisor loop that spawns workers for pending launch_worker and restart_worker requests.
 
 ## Flags
 --dry-run     Skip all on-chain transactions
@@ -176,6 +183,8 @@ const { values: flags } = parseArgs({
 });
 
 // ─── Commands ─────────────────────────────────────────────────────
+
+let keepProcessAlive = false;
 
 switch (subcommand) {
 
@@ -369,6 +378,7 @@ switch (subcommand) {
   case "start": {
     const { getDefaultWorkerRuntime } = await import("./core/worker-runtime.js");
     const worker = getDefaultWorkerRuntime();
+    keepProcessAlive = true;
     process.stderr.write("[meridian] Starting autonomous agent...\n");
     await worker.ensureCronStarted();
     break;
@@ -481,6 +491,35 @@ switch (subcommand) {
     break;
   }
 
+  // —— supervisor once/run ————————————————————————————————————————————
+  case "supervisor": {
+    const { processSupervisorRequests, startWorkerSupervisor } = await import("./core/worker-supervisor.js");
+
+    if (sub2 === "once" || !sub2) {
+      out(await processSupervisorRequests());
+      break;
+    }
+
+    if (sub2 === "run") {
+      keepProcessAlive = true;
+      process.stderr.write("[meridian] Supervisor loop running...\n");
+      startWorkerSupervisor();
+      await new Promise(() => {});
+    }
+
+    die(`Unknown supervisor subcommand: ${sub2}. Use: once, run`);
+    break;
+  }
+
   default:
     die(`Unknown command: ${subcommand}. Run 'meridian help' for usage.`);
+}
+
+if (!keepProcessAlive) {
+  try {
+    const { closeDbPool } = await import("./lib/db.js");
+    await closeDbPool();
+  } catch {
+    // Best-effort shutdown for one-shot CLI commands.
+  }
 }

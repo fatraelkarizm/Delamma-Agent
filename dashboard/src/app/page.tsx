@@ -3,6 +3,7 @@ import YieldChart from "@/components/YieldChart";
 import PerformanceMetrics from "@/components/PerformanceMetrics";
 import PositionsTable from "@/components/PositionsTable";
 import RecentActivity from "@/components/RecentActivity";
+import WorkerRoster from "@/components/WorkerRoster";
 import { buildScopeQuery } from "@/lib/runtimeScope";
 import styles from "./page.module.css";
 
@@ -41,7 +42,10 @@ export default async function Dashboard({ searchParams }: DashboardPageProps) {
     fetchData("/api/trades?limit=10", scopeQuery),
     fetchData("/api/scopes"),
   ]);
-  const controlRequests = await fetchData("/api/control-requests?limit=6", scopeQuery);
+  const [controlRequests, runtimeState] = await Promise.all([
+    fetchData("/api/control-requests?limit=6", scopeQuery),
+    fetchData("/api/runtime-state?worker_limit=8&request_limit=12", scopeQuery),
+  ]);
 
   const scopes = scopeData?.scopes || [];
   const currentScopeLabel = tenantId && walletId
@@ -89,6 +93,10 @@ export default async function Dashboard({ searchParams }: DashboardPageProps) {
             scope={scope}
           />
         </div>
+      </div>
+
+      <div className={styles.runtimeRow}>
+        <WorkerRoster runtimeState={runtimeState} />
       </div>
 
       <div className={styles.bottomRow}>
