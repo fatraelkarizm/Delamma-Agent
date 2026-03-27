@@ -64,10 +64,8 @@ Dokumen ini merekam sejarah pengembangan bot, perubahan prompt, dan refinement a
 - Runtime bot masih single-process dan single-wallet oriented
 - State source of truth masih campuran file JSON + PostgreSQL
 - Dashboard belum full tenant-aware
-- Beberapa route dashboard masih fallback ke `state.json`
-- Ada drift hasil refactor:
-  - sebagian file tools masih mengarah ke path lama seperti `../config.js`, `../state.js`, `../logger.js`
-  - ini perlu dirapikan sebelum diposisikan sebagai basis production SaaS
+- Dashboard legacy fallback sekarang sudah dibuat opt-in via env `DASHBOARD_ALLOW_LEGACY_LOCAL_FILES=true`
+- Drift import path lama (`../config.js`, `../state.js`, `../logger.js`) perlu diaudit ulang per modul karena indikasi awal tidak lagi muncul pada code path aktif
 
 ## Timeline Pengembangan
 
@@ -235,6 +233,42 @@ Makna arsitektur:
 
 - ini adalah titik awal pivot dari single-bot operator tool menuju control panel SaaS
 - namun execution engine belum dipisah dari local runtime, jadi transformasinya masih setengah jalan
+
+## 2026-03-27 - Telegram control-plane SaaS dan penguatan foundation
+
+Perubahan:
+
+- Telegram runtime diposisikan sebagai gateway scope-aware (tenant/wallet), bukan chat global
+- routing notifikasi worker berbasis binding chat ke scope
+- command Telegram dipertegas sebagai control-plane untuk scope remote SaaS
+- free-form chat dibatasi untuk local attached wallet
+- dashboard API mulai ditegaskan ke DB/snapshot-first, fallback file legacy dijadikan opt-in
+- ditambahkan runbook Telegram SaaS di `docs/telegram-saas-runbook.md`
+- ditambahkan smoke test offline `test/test-telegram-state.js`
+- command scope/binding dipisah ke `core/telegram-command-service.js`
+- view/action handler dipisah ke `core/telegram-view-service.js`
+- scoped runtime factory dipisah ke `core/scoped-runtime-factory.js`
+- free-form guard dipisah ke `core/telegram-runtime-guards.js`
+- coverage smoke test Telegram ditambah:
+  - `test/test-control-plane-service.js`
+  - `test/test-telegram-view-service.js`
+  - `test/test-telegram-command-service.js`
+  - `test/test-telegram-runtime-guards.js`
+
+Makna arsitektur:
+
+- boundary control-plane vs execution-plane makin jelas
+- risiko drift ke mode global lama menurun
+- observability operasional Telegram lebih siap untuk lingkungan SaaS
+
+## Next Focus (Belum Selesai)
+
+Prioritas teknis setelah fase ini:
+
+1. Pecah orchestration `index.js` ke service boundary yang lebih tegas (scheduler/app bootstrap/shutdown service)
+2. Lengkapi test untuk routing notifikasi scope pada runtime event worker (bukan hanya command/state layer)
+3. Stabilkan DB-first read path dashboard route lain agar legacy fallback tidak jadi dependency tersembunyi
+4. Rapikan interface control request lifecycle (queued -> running -> completed/failed) dan audit trail Telegram command
 
 ## Ringkasan Refinement Prompt
 

@@ -16,7 +16,7 @@ export async function GET(req: Request) {
     let statePositions: any[] = [];
     try {
       const snapshot = await getLatestStoreSnapshot("state", scope);
-      const raw: any = snapshot?.content || (!scope.tenantId && !scope.walletId ? readLegacyStoreFile("state.json") : null);
+      const raw: any = snapshot?.content || readLegacyStoreFile("state.json");
       if (raw && typeof raw === "object") {
         statePositions = Object.values(raw.positions || {});
       }

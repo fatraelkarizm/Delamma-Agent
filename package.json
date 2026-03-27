@@ -13,6 +13,11 @@
     "dev": "DRY_RUN=true node index.js",
     "test:screen": "node test/test-screening.js",
     "test:agent": "DRY_RUN=true node test/test-agent.js",
+    "test:telegram-state": "node test/test-telegram-state.js",
+    "test:control-plane": "node test/test-control-plane-service.js",
+    "test:telegram-view": "node test/test-telegram-view-service.js",
+    "test:telegram-command": "node test/test-telegram-command-service.js",
+    "test:telegram-guards": "node test/test-telegram-runtime-guards.js",
     "postinstall": "node scripts/patch-anchor.js"
   },
   "dependencies": {

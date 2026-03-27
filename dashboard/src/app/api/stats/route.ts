@@ -48,7 +48,7 @@ export async function GET(req: Request) {
     let openPositions = 0;
     try {
       const scopedSnapshot = await getLatestStoreSnapshot("state", scope);
-      const raw: any = scopedSnapshot?.content || (!scope.tenantId && !scope.walletId ? readLegacyStoreFile("state.json") : null);
+      const raw: any = scopedSnapshot?.content || readLegacyStoreFile("state.json");
       if (raw && typeof raw === "object") {
         openPositions = Object.values(raw.positions || {}).filter((p: any) => !p.closed).length;
       } else {

@@ -48,6 +48,10 @@ export async function getLatestStoreSnapshot(
 }
 
 export function readLegacyStoreFile(fileName: string) {
+  if (String(process.env.DASHBOARD_ALLOW_LEGACY_LOCAL_FILES || "").toLowerCase() !== "true") {
+    return null;
+  }
+
   const candidates = [
     path.join(process.cwd(), "..", "data", fileName),
     path.join(process.cwd(), "..", fileName),
