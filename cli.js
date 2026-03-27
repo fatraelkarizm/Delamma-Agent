@@ -305,16 +305,18 @@ switch (subcommand) {
 
   // ── screen ───────────────────────────────────────────────────────
   case "screen": {
-    const { runScreeningCycle } = await import("./index.js");
-    const report = await runScreeningCycle({ silent });
+    const { getDefaultWorkerRuntime } = await import("./core/worker-runtime.js");
+    const worker = getDefaultWorkerRuntime();
+    const report = await worker.runScreeningCycle({ silent });
     out({ done: true, report: report || "No action taken" });
     break;
   }
 
   // ── manage ───────────────────────────────────────────────────────
   case "manage": {
-    const { runManagementCycle } = await import("./index.js");
-    const report = await runManagementCycle({ silent });
+    const { getDefaultWorkerRuntime } = await import("./core/worker-runtime.js");
+    const worker = getDefaultWorkerRuntime();
+    const report = await worker.runManagementCycle({ silent });
     out({ done: true, report: report || "No action taken" });
     break;
   }
@@ -340,9 +342,10 @@ switch (subcommand) {
 
   // ── start ────────────────────────────────────────────────────────
   case "start": {
-    const { startCronJobs } = await import("./index.js");
+    const { getDefaultWorkerRuntime } = await import("./core/worker-runtime.js");
+    const worker = getDefaultWorkerRuntime();
     process.stderr.write("[meridian] Starting autonomous agent...\n");
-    startCronJobs();
+    await worker.ensureCronStarted();
     break;
   }
 

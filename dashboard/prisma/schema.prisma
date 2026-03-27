@@ -25,6 +25,10 @@ model TradeEvent {
   reason       String?  // close reason
   raw          Json?    // full metadata
 
+  // Multi-tenant support
+  wallet_id    Int?
+  wallet       ManagedWallet? @relation(fields: [wallet_id], references: [id])
+
   @@map("trade_events")
 }
 
@@ -49,6 +53,10 @@ model Position {
   last_claim_at          DateTime?
   updated_at             DateTime  @updatedAt
 
+  // Multi-tenant support
+  wallet_id    Int?
+  wallet       ManagedWallet? @relation(fields: [wallet_id], references: [id])
+
   @@map("positions")
 }
 
@@ -67,12 +75,90 @@ model BotStatus {
 // Daily rolled-up PNL for charting the yield chart
 model DailyPnl {
   id           Int      @id @default(autoincrement())
-  date         String   @unique // YYYY-MM-DD
+  date         String   // YYYY-MM-DD
   pnl_usd      Float    @default(0)
   fees_usd     Float    @default(0)
   trades       Int      @default(0)
   wins         Int      @default(0)
   losses       Int      @default(0)
 
+  // Multi-tenant support
+  wallet_id    Int?
+  wallet       ManagedWallet? @relation(fields: [wallet_id], references: [id])
+
+  @@unique([date, wallet_id])
   @@map("daily_pnl")
+}
+
+model User {
+  id            Int             @id @default(autoincrement())
+  email         String?         @unique
+  wallet_addr   String          @unique // Sign-in with Solana primary wallet
+  role          String          @default("user") // user | admin
+  created_at    DateTime        @default(now())
+  wallets       ManagedWallet[]
+
+  @@map("users")
+}
+
+model ManagedWallet {
+  id                 Int          @id @default(autoincrement())
+  user_id            Int
+  user               User         @relation(fields: [user_id], references: [id])
+  public_key         String       @unique
+  encrypted_secret   String       // AES-256 encrypted private key
+  label              String?
+  is_active          Boolean      @default(true)
+  created_at         DateTime     @default(now())
+  
+  // Settings per wallet (Overrides user-config.json)
+  config_override    Json?        
+  
+  positions          Position[]
+  trade_events       TradeEvent[]
+  daily_pnls         DailyPnl[]
+
+  @@map("managed_wallets")
+}
+
+model WorkerProcess {
+  worker_id        String   @id
+  tenant_id        String
+  wallet_id        String
+  mode             String?
+  channel          String?
+  status           String?
+  metadata         Json?
+  registered_at    DateTime @default(now())
+  last_seen_at     DateTime @default(now())
+  lease_expires_at DateTime?
+
+  @@map("worker_processes")
+}
+
+model WalletLease {
+  tenant_id    String
+  wallet_id    String
+  worker_id    String
+  acquired_at  DateTime @default(now())
+  renewed_at   DateTime @default(now())
+  expires_at   DateTime
+  metadata     Json?
+
+  @@id([tenant_id, wallet_id])
+  @@index([worker_id])
+  @@map("wallet_leases")
+}
+
+model WalletStorageSnapshot {
+  tenant_id   String
+  wallet_id   String
+  store_key   String
+  content     Json
+  metadata    Json?
+  updated_at  DateTime @default(now())
+
+  @@id([tenant_id, wallet_id, store_key])
+  @@index([store_key, updated_at(sort: Desc)])
+  @@map("wallet_storage_snapshots")
 }

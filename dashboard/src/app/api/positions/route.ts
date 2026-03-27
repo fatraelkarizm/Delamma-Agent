@@ -1,29 +1,36 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import fs from "fs";
-import path from "path";
+import { getScopeFromSearchParams, resolveManagedWalletId } from "@/lib/runtimeScope";
+import { getLatestStoreSnapshot, readLegacyStoreFile } from "@/lib/storageSnapshots";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    // Read live positions from state.json first (authoritative for open positions)
+    const { searchParams } = new URL(req.url);
+    const scope = getScopeFromSearchParams(searchParams);
+    const managedWalletId = await resolveManagedWalletId(scope);
+
     let statePositions: any[] = [];
     try {
-      const statePath = path.join(process.cwd(), "..", "state.json");
-      if (fs.existsSync(statePath)) {
-        const raw = JSON.parse(fs.readFileSync(statePath, "utf-8"));
+      const snapshot = await getLatestStoreSnapshot("state", scope);
+      const raw: any = snapshot?.content || (!scope.tenantId && !scope.walletId ? readLegacyStoreFile("state.json") : null);
+      if (raw && typeof raw === "object") {
         statePositions = Object.values(raw.positions || {});
       }
     } catch { /* fallback to DB */ }
 
-    // Merge with DB for extra metadata
-    const dbPositions = await prisma.position.findMany({
-      where: { closed: false },
-      orderBy: { deployed_at: "desc" },
-    });
+    const dbPositions = scope.walletId && !managedWalletId
+      ? []
+      : await prisma.position.findMany({
+          where: {
+            closed: false,
+            ...(managedWalletId ? ({ wallet: { is: { id: managedWalletId } } } as any) : {}),
+          },
+          orderBy: { deployed_at: "desc" },
+        });
 
     // Prefer state.json data, enrich with DB data where available
     const merged = statePositions.length > 0

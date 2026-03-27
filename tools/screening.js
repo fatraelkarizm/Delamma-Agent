@@ -1,6 +1,6 @@
-import { config } from "../config.js";
-import { isBlacklisted } from "../token-blacklist.js";
-import { log } from "../logger.js";
+import { config } from "../core/config.js";
+import { isBlacklisted } from "../memory/token-blacklist.js";
+import { log } from "../lib/logger.js";
 
 const POOL_DISCOVERY_BASE = "https://pool-discovery-api.datapi.meteora.ag";
 
@@ -73,7 +73,6 @@ export async function discoverPools({
  * Hard filters applied in code, agent decides which to deploy into.
  */
 export async function getTopCandidates({ limit = 10 } = {}) {
-  const { config } = await import("../config.js");
   const { pools } = await discoverPools({ page_size: 50 });
 
   // Exclude pools where the wallet already has an open position

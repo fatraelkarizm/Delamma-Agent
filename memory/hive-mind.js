@@ -21,13 +21,9 @@
  */
 
 import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const USER_CONFIG_PATH = path.join(__dirname, "user-config.json");
-const LESSONS_FILE = path.join(__dirname, "lessons.json");
-const POOL_MEMORY_FILE = path.join(__dirname, "pool-memory.json");
+import { USER_CONFIG_PATH } from "../lib/paths.js";
+import { getPerformanceSummary, getLessonsData } from "./lessons.js";
+import { getPoolMemoryData } from "./pool-memory.js";
 
 const SYNC_DEBOUNCE_MS = 5 * 60 * 1000; // 5 minutes
 const GET_TIMEOUT_MS = 5_000;
@@ -51,14 +47,6 @@ function writeConfig(patch) {
   const current = readConfig();
   const merged = { ...current, ...patch };
   fs.writeFileSync(USER_CONFIG_PATH, JSON.stringify(merged, null, 2));
-}
-
-function readJsonFile(filePath) {
-  try {
-    return JSON.parse(fs.readFileSync(filePath, "utf8"));
-  } catch {
-    return null;
-  }
 }
 
 async function fetchWithTimeout(url, options = {}, timeoutMs = GET_TIMEOUT_MS) {
@@ -141,11 +129,11 @@ export async function syncToHive() {
     // ── Collect local data ──────────────────────────
 
     // Lessons
-    const lessonsData = readJsonFile(LESSONS_FILE) || { lessons: [], performance: [] };
+    const lessonsData = getLessonsData() || { lessons: [], performance: [] };
     const lessons = lessonsData.lessons || [];
 
-    // Pool deploys — flatten all pools' deploy arrays
-    const poolMemory = readJsonFile(POOL_MEMORY_FILE) || {};
+    // Pool deploys - flatten all pools' deploy arrays
+    const poolMemory = getPoolMemoryData() || {};
     const deploys = [];
     for (const poolAddr of Object.keys(poolMemory)) {
       const pool = poolMemory[poolAddr];
@@ -174,7 +162,6 @@ export async function syncToHive() {
     // Agent stats via dynamic import (avoids circular deps)
     let agentStats = null;
     try {
-      const { getPerformanceSummary } = await import("./lessons.js");
       agentStats = getPerformanceSummary();
     } catch (e) {
       console.log("[hive]", `Could not load agent stats: ${e.message}`);
