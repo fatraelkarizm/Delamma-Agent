@@ -41,6 +41,7 @@ export default async function Dashboard({ searchParams }: DashboardPageProps) {
     fetchData("/api/trades?limit=10", scopeQuery),
     fetchData("/api/scopes"),
   ]);
+  const controlRequests = await fetchData("/api/control-requests?limit=6", scopeQuery);
 
   const scopes = scopeData?.scopes || [];
   const currentScopeLabel = tenantId && walletId
@@ -81,7 +82,12 @@ export default async function Dashboard({ searchParams }: DashboardPageProps) {
           <YieldChart chartData={chartData} />
         </div>
         <div className={styles.metricsSection}>
-          <PerformanceMetrics stats={stats} botStatus={botStatus} />
+          <PerformanceMetrics
+            stats={stats}
+            botStatus={botStatus}
+            controlRequests={controlRequests?.requests || []}
+            scope={scope}
+          />
         </div>
       </div>
 

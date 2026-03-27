@@ -1,5 +1,9 @@
 import cron from "node-cron";
-import { heartbeat } from "../lib/db.js";
+import {
+  claimNextWorkerControlRequest,
+  completeWorkerControlRequest,
+  heartbeat,
+} from "../lib/db.js";
 import { log } from "../lib/logger.js";
 import { createWorkerStateStore, getTrackedPosition, getTrackedPositions } from "../lib/state.js";
 import { agentLoop } from "./agent.js";
@@ -21,6 +25,8 @@ import { getDefaultWorkerRegistry } from "./worker-registry.js";
 import { runWithRuntimeScope } from "./runtime-scope.js";
 
 const DEFAULT_LEASE_METADATA = { scope: "wallet-runtime" };
+const MAX_CONTROL_REQUESTS_PER_TICK = 3;
+const CONTROL_POLL_INTERVAL_MS = 15_000;
 
 export function createExecutionService(
   workerContext = createWorkerContext(),
@@ -48,6 +54,7 @@ export function createExecutionService(
   let screeningBusy = false;
   let screeningLastTriggered = 0;
   let cronStarted = false;
+  let controlInterval = null;
 
   void registry.registerWorker(workerContext, { status: "created" });
 
@@ -124,6 +131,91 @@ export function createExecutionService(
 
   function isCronStarted() {
     return cronStarted;
+  }
+
+  function ensureControlLoopStarted() {
+    if (controlInterval) return;
+
+    controlInterval = setInterval(() => {
+      processControlRequests().catch((error) => {
+        workerLog("control_error", `Control poll failed: ${error.message}`);
+      });
+    }, CONTROL_POLL_INTERVAL_MS);
+    if (typeof controlInterval.unref === "function") {
+      controlInterval.unref();
+    }
+  }
+
+  async function executeControlRequest(request) {
+    const command = request.command;
+
+    switch (command) {
+      case "start_cron":
+        await ensureCronStarted();
+        return { command, cron_started: isCronStarted() };
+      case "restart_cron":
+        if (isCronStarted()) {
+          await restartCronJobsIfStarted();
+        } else {
+          await ensureCronStarted();
+        }
+        return { command, cron_started: isCronStarted() };
+      case "stop_cron":
+        await stopCronJobs();
+        return { command, cron_started: isCronStarted() };
+      case "run_management_cycle": {
+        const report = await runManagementCycle({ silent: true });
+        return { command, report: report || null };
+      }
+      case "run_screening_cycle": {
+        const report = await runScreeningCycle({ silent: true });
+        return { command, report: report || null };
+      }
+      case "run_briefing":
+        await withWorkerScope(() => runBriefing());
+        return { command, done: true };
+      default:
+        throw new Error(`Unsupported control command: ${command}`);
+    }
+  }
+
+  async function processControlRequests() {
+    if (isExecutionBusy()) return { processed: 0, skipped: "busy" };
+
+    let processed = 0;
+    for (let index = 0; index < MAX_CONTROL_REQUESTS_PER_TICK; index += 1) {
+      const request = await claimNextWorkerControlRequest({
+        tenant_id: workerContext.tenantId,
+        wallet_id: workerContext.walletId,
+        worker_id: workerContext.workerId,
+      });
+
+      if (!request) break;
+
+      processed += 1;
+      workerLog("control", `Processing control request #${request.id}: ${request.command}`);
+
+      try {
+        const result = await withWorkerScope(() => executeControlRequest(request));
+        await completeWorkerControlRequest({
+          id: request.id,
+          worker_id: workerContext.workerId,
+          status: "completed",
+          result,
+        });
+      } catch (error) {
+        workerLog("control_error", `Control request #${request.id} failed: ${error.message}`);
+        await completeWorkerControlRequest({
+          id: request.id,
+          worker_id: workerContext.workerId,
+          status: "failed",
+          result: {},
+          error: error.message,
+        });
+      }
+    }
+
+    return { processed };
   }
 
   async function stopCronJobs({ releaseLease = true } = {}) {
@@ -480,8 +572,14 @@ Summarize the current portfolio health, total fees earned, and performance of al
 
   async function destroy() {
     await stopCronJobs();
+    if (controlInterval) {
+      clearInterval(controlInterval);
+      controlInterval = null;
+    }
     await registry.unregisterWorker(workerContext);
   }
+
+  ensureControlLoopStarted();
 
   return {
     context: workerContext,
@@ -501,6 +599,7 @@ Summarize the current portfolio health, total fees earned, and performance of al
     renewWalletLease,
     releaseWalletLease,
     stopCronJobs,
+    processControlRequests,
     runManagementCycle,
     runScreeningCycle,
     startCronJobs,

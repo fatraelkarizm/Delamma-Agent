@@ -110,13 +110,32 @@ Valid keys: minTvl, maxTvl, minVolume, maxPositions, deployAmountSol, management
 ### meridian start [--dry-run]
 Starts the autonomous agent with cron jobs (management + screening).
 
+### meridian scopes
+Returns discovered runtime scopes from DB snapshots.
+
+### meridian bootstrap snapshots [--tenant-id <id>] [--wallet-id <id>]
+Backfills wallet-scoped JSON stores into PostgreSQL wallet_storage_snapshots.
+
+### meridian rehydrate snapshots [--tenant-id <id>] [--wallet-id <id>] [--store <key>] [--overwrite]
+Restores wallet-scoped JSON stores from PostgreSQL snapshots back into local data files.
+
+### meridian control request --tenant-id <id> --wallet-id <id> --command <cmd>
+Queues a control-plane command for a worker scope.
+
+### meridian control list [--tenant-id <id>] [--wallet-id <id>] [--limit 20]
+Lists recent control-plane requests.
+
 ## Flags
 --dry-run     Skip all on-chain transactions
 --silent      Suppress Telegram notifications for this run
 `;
 
-fs.mkdirSync(meridianDir, { recursive: true });
-fs.writeFileSync(path.join(meridianDir, "SKILL.md"), SKILL_MD);
+try {
+  fs.mkdirSync(meridianDir, { recursive: true });
+  fs.writeFileSync(path.join(meridianDir, "SKILL.md"), SKILL_MD);
+} catch {
+  // Non-fatal in restricted environments where home directory writes are blocked.
+}
 
 // ─── Parse args ───────────────────────────────────────────────────
 const argv = process.argv.slice(2);
@@ -145,6 +164,12 @@ const { values: flags } = parseArgs({
     "dry-run":    { type: "boolean" },
     "silent":     { type: "boolean" },
     limit:        { type: "string" },
+    "tenant-id":  { type: "string" },
+    "wallet-id":  { type: "string" },
+    "no-local":   { type: "boolean" },
+    overwrite:    { type: "boolean" },
+    store:        { type: "string" },
+    command:      { type: "string" },
   },
   allowPositionals: true,
   strict: false,
@@ -346,6 +371,113 @@ switch (subcommand) {
     const worker = getDefaultWorkerRuntime();
     process.stderr.write("[meridian] Starting autonomous agent...\n");
     await worker.ensureCronStarted();
+    break;
+  }
+
+  // —— scopes —————————————————————————————————————————————————————————————
+  case "scopes": {
+    const { getDefaultWorkerRegistry } = await import("./core/worker-registry.js");
+    const { createWorkerContext, describeWorkerContext } = await import("./core/tenant-context.js");
+    const { inspectRuntimeScopes } = await import("./core/storage-bootstrap.js");
+    const context = createWorkerContext({
+      tenantId: flags["tenant-id"] || "local",
+      walletId: flags["wallet-id"] || process.env.WALLET_ADDRESS || "primary",
+      workerId: "cli-inspect",
+      mode: "cli",
+      channel: "scopes",
+    });
+    const registry = getDefaultWorkerRegistry();
+    out({
+      worker: describeWorkerContext(context),
+      runtime: await registry.snapshot(),
+      storage: await inspectRuntimeScopes(),
+    });
+    break;
+  }
+
+  // —— bootstrap snapshots ————————————————————————————————————————————
+  case "bootstrap": {
+    if (sub2 !== "snapshots") {
+      die(`Unknown bootstrap subcommand: ${sub2 || "(missing)"}. Use: meridian bootstrap snapshots`);
+    }
+
+    const { bootstrapWalletStorageSnapshots, getExpectedWalletDataDir } = await import("./core/storage-bootstrap.js");
+    const tenantId = flags["tenant-id"] || null;
+    const walletId = flags["wallet-id"] || null;
+    const includeLocal = !flags["no-local"];
+
+    out({
+      expected_wallet_dir: getExpectedWalletDataDir({ tenantId: tenantId || "local", walletId: walletId || (process.env.WALLET_ADDRESS || "primary") }),
+      result: await bootstrapWalletStorageSnapshots({
+        tenantId,
+        walletId,
+        includeLocal,
+      }),
+    });
+    break;
+  }
+
+  // —— rehydrate snapshots ————————————————————————————————————————————
+  case "rehydrate": {
+    if (sub2 !== "snapshots") {
+      die(`Unknown rehydrate subcommand: ${sub2 || "(missing)"}. Use: meridian rehydrate snapshots`);
+    }
+
+    const { rehydrateWalletStorageSnapshots, getExpectedWalletDataDir } = await import("./core/storage-bootstrap.js");
+    const tenantId = flags["tenant-id"] || null;
+    const walletId = flags["wallet-id"] || null;
+    const storeKey = flags.store || null;
+
+    out({
+      expected_wallet_dir: getExpectedWalletDataDir({
+        tenantId: tenantId || "local",
+        walletId: walletId || (process.env.WALLET_ADDRESS || "primary"),
+      }),
+      result: await rehydrateWalletStorageSnapshots({
+        tenantId,
+        walletId,
+        overwrite: Boolean(flags.overwrite),
+        storeKey,
+      }),
+    });
+    break;
+  }
+
+  // —— control request/list ———————————————————————————————————————————
+  case "control": {
+    const { createWorkerControlRequest, listWorkerControlRequests } = await import("./lib/db.js");
+    const tenantId = flags["tenant-id"] || null;
+    const walletId = flags["wallet-id"] || null;
+
+    if (sub2 === "request") {
+      if (!tenantId || !walletId || !flags.command) {
+        die("Usage: meridian control request --tenant-id <id> --wallet-id <id> --command <cmd>");
+      }
+
+      out({
+        queued: await createWorkerControlRequest({
+          tenant_id: tenantId,
+          wallet_id: walletId,
+          requested_by: "cli",
+          command: flags.command,
+          payload: {},
+        }),
+      });
+      break;
+    }
+
+    if (sub2 === "list" || !sub2) {
+      out({
+        requests: await listWorkerControlRequests({
+          tenant_id: tenantId,
+          wallet_id: walletId,
+          limit: parseInt(flags.limit || "20"),
+        }),
+      });
+      break;
+    }
+
+    die(`Unknown control subcommand: ${sub2}. Use: request, list`);
     break;
   }
 

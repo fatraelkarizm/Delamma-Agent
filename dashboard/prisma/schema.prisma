@@ -162,3 +162,22 @@ model WalletStorageSnapshot {
   @@index([store_key, updated_at(sort: Desc)])
   @@map("wallet_storage_snapshots")
 }
+
+model WorkerControlRequest {
+  id           BigInt   @id @default(autoincrement())
+  tenant_id    String
+  wallet_id    String
+  worker_id    String?
+  requested_by String?
+  command      String
+  payload      Json?
+  status       String   @default("pending")
+  result       Json?
+  error        String?
+  created_at   DateTime @default(now())
+  claimed_at   DateTime?
+  completed_at DateTime?
+
+  @@index([tenant_id, wallet_id, status, created_at])
+  @@map("worker_control_requests")
+}
