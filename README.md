@@ -6,31 +6,31 @@
 
 ## What it does
 
-- **Screens pools** — continuously scans Meteora DLMM pools against configurable thresholds (fee/TVL ratio, organic score, holder count, market cap, bin step, etc.) to surface high-quality opportunities
-- **Manages positions** — opens, monitors, and closes LP positions autonomously; decides to STAY, CLOSE, or REDEPLOY based on live PnL, yield, and range data
-- **Claims fees** — tracks unclaimed fees per position and claims when thresholds are met
-- **Learns from performance** — studies top LPers in target pools, saves structured lessons, and evolves screening thresholds based on closed position history
-- **Monitors any wallet** — look up open DLMM positions and top LPers for any Solana wallet or pool address
-- **Telegram chat** — full agent chat via Telegram, plus cycle reports and out-of-range alerts sent automatically
+- **Screens pools**  continuously scans Meteora DLMM pools against configurable thresholds (fee/TVL ratio, organic score, holder count, market cap, bin step, etc.) to surface high-quality opportunities
+- **Manages positions**  opens, monitors, and closes LP positions autonomously; decides to STAY, CLOSE, or REDEPLOY based on live PnL, yield, and range data
+- **Claims fees**  tracks unclaimed fees per position and claims when thresholds are met
+- **Learns from performance**  studies top LPers in target pools, saves structured lessons, and evolves screening thresholds based on closed position history
+- **Monitors any wallet**  look up open DLMM positions and top LPers for any Solana wallet or pool address
+- **Telegram chat**  full agent chat via Telegram, plus cycle reports and out-of-range alerts sent automatically
 
 ---
 
 ## How it works
 
-Meridian runs a **ReAct agent loop** — each cycle the LLM reasons over live data, calls tools, and acts. Two specialized agents run on independent cron schedules:
+Meridian runs a **ReAct agent loop**  each cycle the LLM reasons over live data, calls tools, and acts. Two specialized agents run on independent cron schedules:
 
 | Agent | Default interval | Role |
 |---|---|---|
-| **Hunter Alpha** | Every 30 min | Pool screening — finds and deploys into the best candidate |
-| **Healer Alpha** | Every 10 min | Position management — evaluates each open position and acts |
+| **Hunter Alpha** | Every 30 min | Pool screening  finds and deploys into the best candidate |
+| **Healer Alpha** | Every 10 min | Position management  evaluates each open position and acts |
 
 A third **health check** runs hourly to summarize portfolio state.
 
 **Data sources used by the agents:**
-- `@meteora-ag/dlmm` SDK — on-chain position data, active bin, deploy/close transactions
-- Meteora DLMM PnL API — position yield, fee accrual, PnL
-- Wallet RPC — SOL and token balances
-- Pool screening API — fee/TVL ratios, volume, organic scores, holder counts
+- `@meteora-ag/dlmm` SDK  on-chain position data, active bin, deploy/close transactions
+- Meteora DLMM PnL API  position yield, fee accrual, PnL
+- Wallet RPC  SOL and token balances
+- Pool screening API  fee/TVL ratios, volume, organic scores, holder counts
 
 Agents are powered via **OpenRouter** and can be swapped for any compatible model by changing `managementModel` / `screeningModel` in `user-config.json`.
 
@@ -82,7 +82,7 @@ cp user-config.example.json user-config.json
 **5. Run**
 
 ```bash
-npm run dev    # dry run — no on-chain transactions
+npm run dev    # dry run  no on-chain transactions
 npm start      # live mode
 ```
 
@@ -92,12 +92,12 @@ On startup Meridian fetches your wallet balance, open positions, and the top poo
 
 ## Config reference
 
-All fields are optional — defaults shown. Edit `user-config.json`.
+All fields are optional  defaults shown. Edit `user-config.json`.
 
 | Field | Default | Description |
 |---|---|---|
-| `walletKey` | — | Base58-encoded private key of the trading wallet |
-| `rpcUrl` | — | Solana RPC endpoint URL |
+| `walletKey` |  | Base58-encoded private key of the trading wallet |
+| `rpcUrl` |  | Solana RPC endpoint URL |
 | `dryRun` | `true` | Simulate all transactions without submitting |
 | `deployAmountSol` | `0.5` | SOL to deploy per new position |
 | `maxPositions` | `3` | Maximum concurrent open positions |
@@ -110,7 +110,7 @@ All fields are optional — defaults shown. Edit `user-config.json`.
 | `minFeeActiveTvlRatio` | `0.05` | Minimum fee/active-TVL ratio (5%) |
 | `minTvl` | `10000` | Minimum pool TVL in USD |
 | `maxTvl` | `150000` | Maximum pool TVL in USD |
-| `minOrganic` | `65` | Minimum organic score (0–100) |
+| `minOrganic` | `65` | Minimum organic score (0100) |
 | `minHolders` | `500` | Minimum token holder count |
 | `timeframe` | `5m` | Candle timeframe used in screening |
 | `category` | `trending` | Pool category filter for screening |
@@ -140,7 +140,7 @@ After startup, an interactive prompt is available. The prompt shows a live count
 | `/thresholds` | Show current screening thresholds and closed-position performance stats |
 | `/evolve` | Trigger threshold evolution from performance data (requires 5+ closed positions) |
 | `/stop` | Graceful shutdown |
-| `<anything else>` | Free-form chat — ask the agent questions, request actions, analyze pools |
+| `<anything else>` | Free-form chat  ask the agent questions, request actions, analyze pools |
 
 Free-form chat persists session history (last 10 exchanges), so you can have a continuous conversation: `"what do you think of pool #2?"`, `"close all positions"`, `"how much have we earned today?"`.
 
@@ -173,13 +173,13 @@ Meridian accumulates structured knowledge in `lessons.json` with two components:
 
 ### Lessons (`/learn`)
 
-Running `/learn` triggers the agent to call `study_top_lpers` on each top candidate pool. It analyzes the on-chain behavior of the best-performing LPs in those pools — hold duration, entry/exit timing, scalping vs. holding patterns, win rates — and saves 4–8 concrete, actionable lessons. Cross-pool patterns are weighted more heavily since they generalize better.
+Running `/learn` triggers the agent to call `study_top_lpers` on each top candidate pool. It analyzes the on-chain behavior of the best-performing LPs in those pools  hold duration, entry/exit timing, scalping vs. holding patterns, win rates  and saves 48 concrete, actionable lessons. Cross-pool patterns are weighted more heavily since they generalize better.
 
 Saved lessons are injected into subsequent agent cycles as part of the system context, improving decision quality over time.
 
 ### Threshold evolution (`/evolve`)
 
-After at least 5 positions have been closed, `/evolve` analyzes the performance record (win rate, average PnL, fee yields) and adjusts the screening thresholds in `user-config.json` accordingly. Changes take effect immediately — no restart needed. The rationale for each change is printed to the console.
+After at least 5 positions have been closed, `/evolve` analyzes the performance record (win rate, average PnL, fee yields) and adjusts the screening thresholds in `user-config.json` accordingly. Changes take effect immediately  no restart needed. The rationale for each change is printed to the console.
 
 Use `/thresholds` to see current values alongside performance stats.
 
@@ -190,10 +190,10 @@ Use `/thresholds` to see current values alongside performance stats.
 Meridian includes an **opt-in** collective intelligence system called **Hive Mind**. When enabled, your agent anonymously shares what it learns (lessons, deploy outcomes, screening thresholds) with other meridian agents and receives crowd wisdom in return.
 
 **What you get:**
-- Pool consensus from other agents — "8 agents deployed here, 72% win rate"
-- Strategy rankings — which strategies actually work across all agents
-- Pattern consensus — what works at different volatility levels
-- Threshold medians — what screening settings other agents have evolved to
+- Pool consensus from other agents  "8 agents deployed here, 72% win rate"
+- Strategy rankings  which strategies actually work across all agents
+- Pattern consensus  what works at different volatility levels
+- Threshold medians  what screening settings other agents have evolved to
 
 **What you share:**
 - Lessons from `lessons.json`
@@ -215,7 +215,7 @@ node -e "import('./hive-mind.js').then(m => m.register('https://meridian-hive-ap
 
 Replace `YOUR_TOKEN` with the registration token from Telegram.
 
-This automatically saves your credentials to `user-config.json`. **Save the API key printed in the terminal** — it will not be shown again.
+This automatically saves your credentials to `user-config.json`. **Save the API key printed in the terminal**  it will not be shown again.
 
 **3. Done.** No restart needed. Your agent will sync on every position close and query the hive during screening.
 
@@ -237,6 +237,6 @@ You can run your own hive server instead of using the public one. See [meridian-
 
 ## Disclaimer
 
-This software is provided as-is, with no warranty. Running an autonomous trading agent carries real financial risk — you can lose funds. Always start with `npm run dev` (dry run) to verify behavior before going live. Never deploy more capital than you can afford to lose. This is not financial advice.
+This software is provided as-is, with no warranty. Running an autonomous trading agent carries real financial risk  you can lose funds. Always start with `npm run dev` (dry run) to verify behavior before going live. Never deploy more capital than you can afford to lose. This is not financial advice.
 
 The authors are not responsible for any losses incurred through use of this software.

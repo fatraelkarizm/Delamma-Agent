@@ -16,7 +16,7 @@ import { fileURLToPath } from "url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(__dirname, "..");
 
-// ─── Fix 1: Patch anchor's package.json exports ──────────────────────────────
+//  Fix 1: Patch anchor's package.json exports 
 const anchorPkgPath = path.join(root, "node_modules/@coral-xyz/anchor/package.json");
 const anchorPkg = JSON.parse(fs.readFileSync(anchorPkgPath, "utf8"));
 const anchorUtils = path.join(root, "node_modules/@coral-xyz/anchor/dist/cjs/utils");
@@ -27,7 +27,7 @@ if (!anchorPkg.exports) {
     .map(d => d.name);
 
   anchorPkg.exports = {
-    // Always serve CJS — anchor's ESM dist has its own bare directory import bugs
+    // Always serve CJS  anchor's ESM dist has its own bare directory import bugs
     ".": {
       default: "./dist/cjs/index.js",
     },
@@ -48,7 +48,7 @@ if (!anchorPkg.exports) {
   console.log("Skip: @coral-xyz/anchor exports already set");
 }
 
-// ─── Fix 2: Patch DLMM index.mjs bare directory imports ──────────────────────
+//  Fix 2: Patch DLMM index.mjs bare directory imports 
 const dlmmMjs = path.join(root, "node_modules/@meteora-ag/dlmm/dist/index.mjs");
 
 if (fs.existsSync(dlmmMjs)) {

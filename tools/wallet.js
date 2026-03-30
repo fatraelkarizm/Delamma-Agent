@@ -6,7 +6,7 @@ import {
   Keypair,
 } from "@solana/web3.js";
 import bs58 from "bs58";
-import { log } from "../logger.js";
+import { log } from "../integrations/logger.js";
 import { config } from "../config.js";
 
 let _connection = null;
@@ -59,7 +59,7 @@ export async function getWalletBalances() {
     const data = await res.json();
     const balances = data.balances || [];
 
-    // ─── Find SOL and USDC ────────────────────────────────────
+    //  Find SOL and USDC 
     const solEntry = balances.find(b => b.mint === config.tokens.SOL || b.symbol === "SOL");
     const usdcEntry = balances.find(b => b.mint === config.tokens.USDC || b.symbol === "USDC");
 
@@ -68,7 +68,7 @@ export async function getWalletBalances() {
     const solUsd = solEntry?.usdValue || 0;
     const usdcBalance = usdcEntry?.balance || 0;
 
-    // ─── Map all tokens ───────────────────────────────────────
+    //  Map all tokens 
     const enrichedTokens = balances.map(b => ({
       mint: b.mint,
       symbol: b.symbol || b.mint.slice(0, 8),
@@ -101,7 +101,7 @@ export async function getWalletBalances() {
 }
 
 /**
- * Swap tokens via Jupiter Ultra API (order → sign → execute).
+ * Swap tokens via Jupiter Ultra API (order  sign  execute).
  */
 const SOL_MINT = "So11111111111111111111111111111111111111112";
 
@@ -132,16 +132,16 @@ export async function swapToken({
     return {
       dry_run: true,
       would_swap: { input_mint, output_mint, amount },
-      message: "DRY RUN — no transaction sent",
+      message: "DRY RUN  no transaction sent",
     };
   }
 
   try {
-    log("swap", `${amount} of ${input_mint} → ${output_mint}`);
+    log("swap", `${amount} of ${input_mint}  ${output_mint}`);
     const wallet = getWallet();
     const connection = getConnection();
 
-    // ─── Convert to smallest unit ──────────────────────────────
+    //  Convert to smallest unit 
     let decimals = 9; // SOL default
     if (input_mint !== config.tokens.SOL) {
       const mintInfo = await connection.getParsedAccountInfo(new PublicKey(input_mint));
@@ -149,7 +149,7 @@ export async function swapToken({
     }
     const amountStr = Math.floor(amount * Math.pow(10, decimals)).toString();
 
-    // ─── Get Ultra order (unsigned tx + requestId) ─────────────
+    //  Get Ultra order (unsigned tx + requestId) 
     const orderUrl =
       `${JUPITER_ULTRA_API}/order` +
       `?inputMint=${input_mint}` +
@@ -177,12 +177,12 @@ export async function swapToken({
 
     const { transaction: unsignedTx, requestId } = order;
 
-    // ─── Deserialize and sign ─────────────────────────────────
+    //  Deserialize and sign 
     const tx = VersionedTransaction.deserialize(Buffer.from(unsignedTx, "base64"));
     tx.sign([wallet]);
     const signedTx = Buffer.from(tx.serialize()).toString("base64");
 
-    // ─── Execute ───────────────────────────────────────────────
+    //  Execute 
     const execRes = await fetch(`${JUPITER_ULTRA_API}/execute`, {
       method: "POST",
       headers: {
@@ -217,7 +217,7 @@ export async function swapToken({
 }
 
 async function swapViaQuoteApi({ wallet, connection, input_mint, output_mint, amountStr }) {
-  // ─── Get quote ─────────────────────────────────────────────
+  //  Get quote 
   const quoteRes = await fetch(
     `${JUPITER_QUOTE_API}/quote?inputMint=${input_mint}&outputMint=${output_mint}&amount=${amountStr}&slippageBps=300`,
     { headers: { "x-api-key": JUPITER_API_KEY } }
@@ -226,7 +226,7 @@ async function swapViaQuoteApi({ wallet, connection, input_mint, output_mint, am
   const quote = await quoteRes.json();
   if (quote.error) throw new Error(`Quote error: ${quote.error}`);
 
-  // ─── Get swap tx ───────────────────────────────────────────
+  //  Get swap tx 
   const swapRes = await fetch(`${JUPITER_QUOTE_API}/swap`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "x-api-key": JUPITER_API_KEY },
@@ -239,7 +239,7 @@ async function swapViaQuoteApi({ wallet, connection, input_mint, output_mint, am
   if (!swapRes.ok) throw new Error(`Swap tx failed: ${swapRes.status} ${await swapRes.text()}`);
   const { swapTransaction } = await swapRes.json();
 
-  // ─── Sign and send ─────────────────────────────────────────
+  //  Sign and send 
   const tx = VersionedTransaction.deserialize(Buffer.from(swapTransaction, "base64"));
   tx.sign([wallet]);
   const txHash = await connection.sendRawTransaction(tx.serialize(), { skipPreflight: false });
@@ -248,3 +248,4 @@ async function swapViaQuoteApi({ wallet, connection, input_mint, output_mint, am
   log("swap", `SUCCESS (fallback) tx: ${txHash}`);
   return { success: true, tx: txHash, input_mint, output_mint };
 }
+

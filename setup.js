@@ -30,9 +30,9 @@ function askNum(question, defaultVal, { min, max } = {}) {
     while (true) {
       const raw = await ask(question, defaultVal);
       const n = parseFloat(raw);
-      if (isNaN(n))                        { console.log(`  ⚠ Please enter a number.`); continue; }
-      if (min !== undefined && n < min)    { console.log(`  ⚠ Minimum is ${min}.`);     continue; }
-      if (max !== undefined && n > max)    { console.log(`  ⚠ Maximum is ${max}.`);     continue; }
+      if (isNaN(n))                        { console.log(`   Please enter a number.`); continue; }
+      if (min !== undefined && n < min)    { console.log(`   Minimum is ${min}.`);     continue; }
+      if (max !== undefined && n > max)    { console.log(`   Maximum is ${max}.`);     continue; }
       resolve(n);
       break;
     }
@@ -48,18 +48,18 @@ function askChoice(question, choices) {
       const raw = await ask("Enter number", "");
       const idx = parseInt(raw) - 1;
       if (idx >= 0 && idx < choices.length) { resolve(choices[idx]); break; }
-      console.log("  ⚠ Invalid choice.");
+      console.log("   Invalid choice.");
     }
   });
 }
 
-// ─── Presets ──────────────────────────────────────────────────────────────────
+//  Presets 
 const PRESETS = {
   degen: {
-    label:                 "🔥 Degen",
+    label:                 " Degen",
     timeframe:             "30m",
     maxVolatility:         12.0,   // pumping meme coins welcome
-    maxPriceChangePct:     1000,   // don't filter pumps — high fee/TVL is the gate
+    maxPriceChangePct:     1000,   // don't filter pumps  high fee/TVL is the gate
     minOrganic:            60,
     minHolders:            200,
     maxMcap:               5_000_000,
@@ -70,7 +70,7 @@ const PRESETS = {
     description: "30m timeframe, pumping tokens allowed, fast cycles. High risk/reward.",
   },
   moderate: {
-    label:                 "⚖️  Moderate",
+    label:                 "  Moderate",
     timeframe:             "4h",
     maxVolatility:         8.0,    // allow active meme coins
     maxPriceChangePct:     300,    // allow up to 3x pump if fee/TVL justifies it
@@ -84,7 +84,7 @@ const PRESETS = {
     description: "4h timeframe, balanced risk/reward. Recommended for most users.",
   },
   safe: {
-    label:                 "🛡️  Safe",
+    label:                 "  Safe",
     timeframe:             "24h",
     maxVolatility:         2.5,
     maxPriceChangePct:     80,     // avoid pumped coins
@@ -107,30 +107,30 @@ const existing = fs.existsSync(CONFIG_PATH)
 const e = (key, fallback) => existing[key] ?? fallback;
 
 console.log(`
-╔═══════════════════════════════════════════╗
-║       DLMM LP Agent — Setup Wizard        ║
-╚═══════════════════════════════════════════╝
+
+       DLMM LP Agent  Setup Wizard        
+
 `);
 
-// ─── Preset selection ─────────────────────────────────────────────────────────
+//  Preset selection 
 const presetChoice = await askChoice("Select a risk preset:", [
-  { label: `Degen    — ${PRESETS.degen.description}`,    key: "degen"    },
-  { label: `Moderate — ${PRESETS.moderate.description}`, key: "moderate" },
-  { label: `Safe     — ${PRESETS.safe.description}`,     key: "safe"     },
-  { label: "Custom   — Configure every setting manually", key: "custom"  },
+  { label: `Degen     ${PRESETS.degen.description}`,    key: "degen"    },
+  { label: `Moderate  ${PRESETS.moderate.description}`, key: "moderate" },
+  { label: `Safe      ${PRESETS.safe.description}`,     key: "safe"     },
+  { label: "Custom    Configure every setting manually", key: "custom"  },
 ]);
 
 let preset = presetChoice.key === "custom" ? null : PRESETS[presetChoice.key];
 
 console.log(preset
-  ? `\n✓ Using ${preset.label} preset. You can still override individual values below.\n`
-  : `\nCustom mode — configure everything manually.\n`
+  ? `\n Using ${preset.label} preset. You can still override individual values below.\n`
+  : `\nCustom mode  configure everything manually.\n`
 );
 
 const p = (key, fallback) => preset?.[key] ?? e(key, fallback);
 
-// ─── Wallet & RPC ─────────────────────────────────────────────────────────────
-console.log("── Wallet & RPC ──────────────────────────────");
+//  Wallet & RPC 
+console.log(" Wallet & RPC ");
 
 const rpcUrl = await ask(
   "RPC URL",
@@ -142,8 +142,8 @@ const walletKey = await ask(
   e("walletKey", process.env.WALLET_PRIVATE_KEY ? "*** (already set in .env)" : "")
 );
 
-// ─── Deployment ───────────────────────────────────────────────────────────────
-console.log("\n── Deployment ────────────────────────────────");
+//  Deployment 
+console.log("\n Deployment ");
 
 const deployAmountSol = await askNum(
   "SOL to deploy per position",
@@ -169,8 +169,8 @@ const maxDeployAmount = await askNum(
   { min: deployAmountSol }
 );
 
-// ─── Risk ─────────────────────────────────────────────────────────────────────
-console.log("\n── Risk & Filters ────────────────────────────");
+//  Risk 
+console.log("\n Risk & Filters ");
 
 const timeframe = await ask(
   "Pool discovery timeframe (30m / 1h / 4h / 12h / 24h)",
@@ -207,8 +207,8 @@ const maxMcap = await askNum(
   { min: 100_000 }
 );
 
-// ─── Exit ─────────────────────────────────────────────────────────────────────
-console.log("\n── Exit Rules ────────────────────────────────");
+//  Exit 
+console.log("\n Exit Rules ");
 
 const takeProfitFeePct = await askNum(
   "Take profit when fees earned >= X% of deployed capital",
@@ -222,8 +222,8 @@ const outOfRangeWaitMinutes = await askNum(
   { min: 1 }
 );
 
-// ─── Scheduling ───────────────────────────────────────────────────────────────
-console.log("\n── Scheduling ────────────────────────────────");
+//  Scheduling 
+console.log("\n Scheduling ");
 
 const managementIntervalMin = await askNum(
   "Management cycle interval (minutes)",
@@ -237,8 +237,8 @@ const screeningIntervalMin = await askNum(
   { min: 5 }
 );
 
-// ─── LLM ──────────────────────────────────────────────────────────────────────
-console.log("\n── LLM ───────────────────────────────────────");
+//  LLM 
+console.log("\n LLM ");
 
 const llmModel = await ask(
   "LLM model (OpenRouter model ID)",
@@ -252,7 +252,7 @@ const dryRun = await ask(
 
 rl.close();
 
-// ─── Save ──────────────────────────────────────────────────────────────────────
+//  Save 
 const userConfig = {
   preset: presetChoice.key,
   rpcUrl,
@@ -280,9 +280,9 @@ fs.writeFileSync(CONFIG_PATH, JSON.stringify(userConfig, null, 2));
 const presetName = preset ? preset.label : "Custom";
 
 console.log(`
-╔═══════════════════════════════════════════╗
-║           Configuration Saved             ║
-╚═══════════════════════════════════════════╝
+
+           Configuration Saved             
+
 
 Preset:       ${presetName}
 Timeframe:    ${timeframe}

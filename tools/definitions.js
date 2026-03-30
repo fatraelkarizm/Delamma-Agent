@@ -1,7 +1,7 @@
 export const tools = [
-  // ═══════════════════════════════════════════
+  // 
   //  SCREENING TOOLS
-  // ═══════════════════════════════════════════
+  // 
   {
     type: "function",
     function: {
@@ -49,7 +49,7 @@ Use this as the primary tool for finding new LP opportunities.`,
     function: {
       name: "get_top_candidates",
       description: `Get the top pre-scored pool candidates ready for deployment.
-All filtering, scoring, and rule-checking is done in code — no analysis needed.
+All filtering, scoring, and rule-checking is done in code  no analysis needed.
 Returns the top N eligible pools ranked by score (fee/TVL, organic, stability, volume).
 Each pool includes a score (0-100) and has already passed all hard disqualifiers.
 Use this instead of discover_pools for screening cycles.`,
@@ -93,9 +93,9 @@ IMPORTANT: Only call this with a real pool address from get_my_positions or get_
     }
   },
 
-  // ═══════════════════════════════════════════
+  // 
   //  POSITION DEPLOYMENT TOOLS
-  // ═══════════════════════════════════════════
+  // 
   {
     type: "function",
     function: {
@@ -127,8 +127,8 @@ Always call this before deploying a position to get the freshest price.`,
       description: `Open a new DLMM liquidity position.
 
 PRIORITY ORDER for strategy and bins:
-1. User explicitly specifies → always follow exactly (user override is absolute)
-2. No user spec → use active strategy's lp_strategy and choose bins based on volatility
+1. User explicitly specifies  always follow exactly (user override is absolute)
+2. No user spec  use active strategy's lp_strategy and choose bins based on volatility
 
 HARD RULES:
 - Never use 'curve'.
@@ -136,7 +136,7 @@ HARD RULES:
 
 Guidelines (only when user hasn't specified):
 - Strategy: use the active strategy's lp_strategy field (bid_ask or spot)
-- Bins: choose 35–69 for standard volatility; up to 350 for wide-range strategies. Max 1400 total.
+- Bins: choose 35-69 for standard volatility; up to 350 for wide-range strategies. Max 1400 total.
 - Deposit: Can be single-sided (SOL only or Base only) or dual-sided.
 
 WARNING: This executes a real on-chain transaction. Check DRY_RUN mode.`,
@@ -166,14 +166,14 @@ WARNING: This executes a real on-chain transaction. Check DRY_RUN mode.`,
           },
           bins_below: {
             type: "number",
-            description: "Number of bins below active bin. If the user specifies a value, use it exactly. If they specify a % range (e.g. '-60% range'), convert using: bins = ceil(log(1 - pct) / log(1 + bin_step/10000)). Example: -60% range at bin_step 100 → ceil(log(0.40)/log(1.01)) = 92 bins. Otherwise choose based on volatility: 35–69 standard, 100–350 for wide-range strategies. Max 1400 total."
+            description: "Number of bins below active bin. If the user specifies a value, use it exactly. If they specify a % range (e.g. '-60% range'), convert using: bins = ceil(log(1 - pct) / log(1 + bin_step/10000)). Example: -60% range at bin_step 100  ceil(log(0.40)/log(1.01)) = 92 bins. Otherwise choose based on volatility: 35-69 standard, 100-350 for wide-range strategies. Max 1400 total."
           },
           bins_above: {
             type: "number",
-            description: "Number of bins above active bin. MUST be 0 for bid_ask strategy — placing bins above active bin defeats the purpose of bid-ask. Only set > 0 for spot/dual-sided strategies."
+            description: "Number of bins above active bin. MUST be 0 for bid_ask strategy  placing bins above active bin defeats the purpose of bid-ask. Only set > 0 for spot/dual-sided strategies."
           },
           pool_name: { type: "string", description: "Human-readable pool name for record-keeping" },
-          base_mint: { type: "string", description: "Base token mint address — used to prevent duplicate token exposure across pools" },
+          base_mint: { type: "string", description: "Base token mint address  used to prevent duplicate token exposure across pools" },
           bin_step: { type: "number", description: "Pool bin step (from discover_pools)" },
           base_fee: { type: "number", description: "Pool base fee percentage (from discover_pools)" },
           volatility: { type: "number", description: "Pool volatility at deploy time" },
@@ -186,9 +186,9 @@ WARNING: This executes a real on-chain transaction. Check DRY_RUN mode.`,
     }
   },
 
-  // ═══════════════════════════════════════════
+  // 
   //  POSITION MANAGEMENT TOOLS
-  // ═══════════════════════════════════════════
+  // 
   {
     type: "function",
     function: {
@@ -304,9 +304,9 @@ position address, pool, bin range, in-range status, unclaimed fees, PnL, age.`,
     }
   },
 
-  // ═══════════════════════════════════════════
+  // 
   //  WALLET TOOLS
-  // ═══════════════════════════════════════════
+  // 
   {
     type: "function",
     function: {
@@ -357,15 +357,15 @@ WARNING: This executes a real on-chain transaction.`,
     }
   },
 
-  // ═══════════════════════════════════════════
+  // 
   //  LEARNING TOOLS
-  // ═══════════════════════════════════════════
+  // 
   {
     type: "function",
     function: {
       name: "update_config",
       description: `Update any of your operating parameters at runtime.
-Changes persist to user-config.json and take effect immediately — no restart needed.
+Changes persist to user-config.json and take effect immediately  no restart needed.
 
 VALID KEYS (use EXACTLY these key names, nothing else):
 Screening: minFeeActiveTvlRatio, minTvl, maxTvl, minVolume, minOrganic, minHolders, minMcap, maxMcap, minBinStep, maxBinStep, timeframe, category, minTokenFeesSol
@@ -375,7 +375,7 @@ Schedule: managementIntervalMin, screeningIntervalMin
 Models: managementModel, screeningModel, generalModel
 Strategy: binsBelow
 
-Reason is optional but helpful — logged as a lesson when provided.`,
+Reason is optional but helpful  logged as a lesson when provided.`,
       parameters: {
         type: "object",
         properties: {
@@ -385,7 +385,7 @@ Reason is optional but helpful — logged as a lesson when provided.`,
           },
           reason: {
             type: "string",
-            description: "Why you are making this change — what you observed that justified it"
+            description: "Why you are making this change  what you observed that justified it"
           }
         },
         required: ["changes"]
@@ -404,9 +404,9 @@ Responds with what changed before restarting in 3 seconds.`,
     }
   },
 
-  // ═══════════════════════════════════════════
+  // 
   //  SMART WALLET TOOLS
-  // ═══════════════════════════════════════════
+  // 
   {
     type: "function",
     function: {
@@ -457,7 +457,7 @@ Use when the user says "add smart wallet", "track this wallet", "add to smart wa
     function: {
       name: "check_smart_wallets_on_pool",
       description: `Check if any tracked smart wallets have an active position in a given pool.
-Use this before deploying to gauge confidence — if smart wallets are in the pool it's a strong signal.
+Use this before deploying to gauge confidence  if smart wallets are in the pool it's a strong signal.
 If no smart wallets are present, rely on fundamentals (fees, volume, organic score) as usual.`,
       parameters: {
         type: "object",
@@ -493,11 +493,11 @@ Returns: organic score, holder count, mcap, liquidity, audit flags (mint/freeze 
     function: {
       name: "get_token_holders",
       description: `Get holder distribution for a token by mint address.
-Fetches top 100 holders — use limit to control how many to display (default 20).
+Fetches top 100 holders  use limit to control how many to display (default 20).
 Each holder includes: address, amount, % of supply, SOL balance, tags (Pool/AMM/etc), and funding info (who funded this wallet, amount, slot).
-is_pool=true means it's a liquidity pool address, not a real holder — filter these out when analyzing concentration.
+is_pool=true means it's a liquidity pool address, not a real holder  filter these out when analyzing concentration.
 
-Also returns global_fees_sol — total priority/jito tips paid by ALL traders on this token (NOT Meteora LP fees).
+Also returns global_fees_sol  total priority/jito tips paid by ALL traders on this token (NOT Meteora LP fees).
 This is a key signal: low global_fees_sol means transactions are bundled or the token is a scam.
 HARD GATE: if global_fees_sol < config.screening.minTokenFeesSol (default 30), do NOT deploy.
 
@@ -518,7 +518,7 @@ NOTE: Requires mint address. If you only have a symbol/name, call get_token_info
     function: {
       name: "get_token_narrative",
       description: `Get the narrative or story behind a token from Jupiter ChainInsight.
-Returns a plain-text description of what the token is about — its origin, theme, community, and activity.
+Returns a plain-text description of what the token is about  its origin, theme, community, and activity.
 Use during token evaluation to understand if there is a real catalyst driving attention and volume.
 
 GOOD narrative signals (proceed with more confidence):
@@ -528,7 +528,7 @@ GOOD narrative signals (proceed with more confidence):
 - Named entities: real identifiable subjects (a specific animal, person, project, game, etc.)
 
 BAD narrative signals (caution or skip):
-- Empty or null — no story at all
+- Empty or null  no story at all
 - Pure hype/financial language only: "next 100x", "to the moon", "fair launch gem" with no substance
 - Completely generic: "community-driven token", "meme coin" with zero specific context
 - Copy-paste of another token's narrative`,
@@ -574,7 +574,7 @@ Returns pool address, name, bin_step, fee %, TVL, volume, and token mints.`,
     type: "function",
     function: {
       name: "get_top_lpers",
-      description: `Get the top LPers for a pool by address — quick read-only lookup.
+      description: `Get the top LPers for a pool by address  quick read-only lookup.
 Use this when the user asks "who are the top LPers in this pool?" or wants to
 know how others are performing in a specific pool without saving lessons.
 
@@ -690,20 +690,20 @@ Pass null or empty string to clear an existing instruction.`,
       description: `Save a lesson to the agent's permanent memory.
 Use after studying top LPers or observing a pattern worth remembering.
 Lessons are injected into the system prompt on every future cycle.
-Write concrete, actionable rules — not vague observations.
+Write concrete, actionable rules  not vague observations.
 
 Use 'role' to target a specific agent type so it only appears in the right context.
 Use 'pinned: true' for critical rules that must always be present regardless of memory cap.
 
 Examples:
 - rule: "PREFER: pools where top LPers hold < 30 min", tags: ["scalping"], role: "SCREENER"
-- rule: "AVOID: closing when OOR < 30min — price often recovers", tags: ["oor"], role: "MANAGER", pinned: true`,
+- rule: "AVOID: closing when OOR < 30min  price often recovers", tags: ["oor"], role: "MANAGER", pinned: true`,
       parameters: {
         type: "object",
         properties: {
           rule: {
             type: "string",
-            description: "The lesson rule — specific and actionable"
+            description: "The lesson rule  specific and actionable"
           },
           tags: {
             type: "array",
@@ -725,7 +725,7 @@ Examples:
     }
   },
 
-  // ─── Strategy Library ──────────────────────────────────────────
+  //  Strategy Library 
 
   {
     type: "function",
@@ -841,7 +841,7 @@ Call list_strategies first to see available options.`,
     }
   },
 
-  // ─── Lesson Management ─────────────────────────────────────────
+  //  Lesson Management 
 
   {
     type: "function",
@@ -866,7 +866,7 @@ Use to find a lesson ID before pinning/unpinning, or to audit what the agent cur
     function: {
       name: "pin_lesson",
       description: `Pin a lesson by ID so it's always injected into the prompt regardless of memory cap.
-Use for critical rules that must never be forgotten — e.g. narrative criteria, hard risk rules.
+Use for critical rules that must never be forgotten  e.g. narrative criteria, hard risk rules.
 Call list_lessons first to find the lesson ID.`,
       parameters: {
         type: "object",
@@ -893,7 +893,7 @@ Call list_lessons first to find the lesson ID.`,
     }
   },
 
-  // ─── Performance History ────────────────────────────────────────
+  //  Performance History 
 
   {
     type: "function",
@@ -918,7 +918,7 @@ Returns individual closed positions with PnL, fees, strategy, hold time, and clo
     }
   },
 
-  // ─── Pool Memory ────────────────────────────────────────────────
+  //  Pool Memory 
 
   {
     type: "function",
@@ -927,7 +927,7 @@ Returns individual closed positions with PnL, fees, strategy, hold time, and clo
       description: `Check your deploy history for a pool BEFORE deploying.
 Returns all past deploys, PnL, win rate, and any notes you've added.
 
-Call this tool before deploying to any pool — you may have been here before and it didn't work.
+Call this tool before deploying to any pool  you may have been here before and it didn't work.
 Also useful during screening to skip pools with a bad track record.`,
       parameters: {
         type: "object",
@@ -948,9 +948,9 @@ Also useful during screening to skip pools with a bad track record.`,
       name: "add_pool_note",
       description: `Annotate a pool with a freeform note that persists across sessions.
 Use when you observe something worth remembering about a specific pool:
-- "volume dried up after 2h — avoid during off-hours"
+- "volume dried up after 2h  avoid during off-hours"
 - "consistently good during Asian session"
-- "rugged base token — monitor closely"`,
+- "rugged base token  monitor closely"`,
       parameters: {
         type: "object",
         properties: {
@@ -968,7 +968,7 @@ Use when you observe something worth remembering about a specific pool:
     }
   },
 
-  // ─── Token Blacklist ────────────────────────────────────────────
+  //  Token Blacklist 
 
   {
     type: "function",

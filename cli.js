@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * meridian — Solana DLMM LP Agent CLI
+ * meridian  Solana DLMM LP Agent CLI
  * Direct tool invocation with JSON output. Agent-native.
  */
 
@@ -10,10 +10,10 @@ import os from "os";
 import fs from "fs";
 import path from "path";
 
-// ─── DRY_RUN must be set before any tool imports ─────────────────
+//  DRY_RUN must be set before any tool imports 
 if (process.argv.includes("--dry-run")) process.env.DRY_RUN = "true";
 
-// ─── Load .env from ~/.meridian/ if present ──────────────────────
+//  Load .env from ~/.meridian/ if present 
 const meridianDir = path.join(os.homedir(), ".meridian");
 const meridianEnv = path.join(meridianDir, ".env");
 if (fs.existsSync(meridianEnv)) {
@@ -21,7 +21,7 @@ if (fs.existsSync(meridianEnv)) {
   loadDotenv({ path: meridianEnv, override: false });
 }
 
-// ─── Output helpers ───────────────────────────────────────────────
+//  Output helpers 
 function out(data) {
   process.stdout.write(JSON.stringify(data, null, 2) + "\n");
 }
@@ -31,8 +31,8 @@ function die(msg, extra = {}) {
   process.exit(1);
 }
 
-// ─── SKILL.md generation ──────────────────────────────────────────
-const SKILL_MD = `# meridian — Solana DLMM LP Agent CLI
+//  SKILL.md generation 
+const SKILL_MD = `# meridian  Solana DLMM LP Agent CLI
 
 Data dir: ~/.meridian/
 
@@ -118,7 +118,7 @@ Starts the autonomous agent with cron jobs (management + screening).
 fs.mkdirSync(meridianDir, { recursive: true });
 fs.writeFileSync(path.join(meridianDir, "SKILL.md"), SKILL_MD);
 
-// ─── Parse args ───────────────────────────────────────────────────
+//  Parse args 
 const argv = process.argv.slice(2);
 const subcommand = argv.find(a => !a.startsWith("-"));
 const sub2 = argv.filter(a => !a.startsWith("-"))[1]; // for "config get/set"
@@ -129,7 +129,7 @@ if (!subcommand || subcommand === "help" || argv.includes("--help")) {
   process.exit(0);
 }
 
-// ─── Parse flags ──────────────────────────────────────────────────
+//  Parse flags 
 const { values: flags } = parseArgs({
   args: argv,
   options: {
@@ -150,31 +150,31 @@ const { values: flags } = parseArgs({
   strict: false,
 });
 
-// ─── Commands ─────────────────────────────────────────────────────
+//  Commands 
 
 switch (subcommand) {
 
-  // ── balance ──────────────────────────────────────────────────────
+  //  balance 
   case "balance": {
     const { getWalletBalances } = await import("./tools/wallet.js");
     out(await getWalletBalances({}));
     break;
   }
 
-  // ── positions ────────────────────────────────────────────────────
+  //  positions 
   case "positions": {
     const { getMyPositions } = await import("./tools/dlmm.js");
     out(await getMyPositions({ force: true }));
     break;
   }
 
-  // ── pnl <position_address> ───────────────────────────────────────
+  //  pnl <position_address> 
   case "pnl": {
     const posAddr = argv.find((a, i) => !a.startsWith("-") && i > 0 && argv[i - 1] !== "--position" && a !== "pnl");
     const positionAddress = flags.position || posAddr;
     if (!positionAddress) die("Usage: meridian pnl <position_address>");
 
-    const { getTrackedPosition } = await import("./state.js");
+    const { getTrackedPosition } = await import("./storage/state.js");
     const { getPositionPnl, getMyPositions } = await import("./tools/dlmm.js");
 
     let poolAddress;
@@ -193,13 +193,13 @@ switch (subcommand) {
     break;
   }
 
-  // ── candidates ───────────────────────────────────────────────────
+  //  candidates 
   case "candidates": {
     const { getTopCandidates } = await import("./tools/screening.js");
     const { getActiveBin } = await import("./tools/dlmm.js");
     const { getTokenInfo, getTokenHolders, getTokenNarrative } = await import("./tools/token.js");
-    const { checkSmartWalletsOnPool } = await import("./smart-wallets.js");
-    const { recallForPool } = await import("./pool-memory.js");
+    const { checkSmartWalletsOnPool } = await import("./storage/smart-wallets.js");
+    const { recallForPool } = await import("./storage/pool-memory.js");
 
     const limit = parseInt(flags.limit || "5");
     const raw = await getTopCandidates({ limit });
@@ -256,7 +256,7 @@ switch (subcommand) {
     break;
   }
 
-  // ── deploy ───────────────────────────────────────────────────────
+  //  deploy 
   case "deploy": {
     if (!flags.pool) die("Usage: meridian deploy --pool <addr> --amount <sol>");
     if (!flags.amount) die("--amount is required");
@@ -272,7 +272,7 @@ switch (subcommand) {
     break;
   }
 
-  // ── claim ────────────────────────────────────────────────────────
+  //  claim 
   case "claim": {
     if (!flags.position) die("Usage: meridian claim --position <addr>");
     const { executeTool } = await import("./tools/executor.js");
@@ -280,7 +280,7 @@ switch (subcommand) {
     break;
   }
 
-  // ── close ────────────────────────────────────────────────────────
+  //  close 
   case "close": {
     if (!flags.position) die("Usage: meridian close --position <addr>");
     const { executeTool } = await import("./tools/executor.js");
@@ -291,7 +291,7 @@ switch (subcommand) {
     break;
   }
 
-  // ── swap ─────────────────────────────────────────────────────────
+  //  swap 
   case "swap": {
     if (!flags.from || !flags.to || !flags.amount) die("Usage: meridian swap --from <mint> --to <mint> --amount <n>");
     const { executeTool } = await import("./tools/executor.js");
@@ -303,7 +303,7 @@ switch (subcommand) {
     break;
   }
 
-  // ── screen ───────────────────────────────────────────────────────
+  //  screen 
   case "screen": {
     const { runScreeningCycle } = await import("./index.js");
     const report = await runScreeningCycle({ silent });
@@ -311,7 +311,7 @@ switch (subcommand) {
     break;
   }
 
-  // ── manage ───────────────────────────────────────────────────────
+  //  manage 
   case "manage": {
     const { runManagementCycle } = await import("./index.js");
     const report = await runManagementCycle({ silent });
@@ -319,7 +319,7 @@ switch (subcommand) {
     break;
   }
 
-  // ── config ───────────────────────────────────────────────────────
+  //  config 
   case "config": {
     if (sub2 === "get" || !sub2) {
       const { config } = await import("./config.js");
@@ -338,7 +338,7 @@ switch (subcommand) {
     break;
   }
 
-  // ── start ────────────────────────────────────────────────────────
+  //  start 
   case "start": {
     const { startCronJobs } = await import("./index.js");
     process.stderr.write("[meridian] Starting autonomous agent...\n");
@@ -349,3 +349,4 @@ switch (subcommand) {
   default:
     die(`Unknown command: ${subcommand}. Run 'meridian help' for usage.`);
 }
+

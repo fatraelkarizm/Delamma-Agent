@@ -11,13 +11,13 @@ import {
 } from "./dlmm.js";
 import { getWalletBalances, swapToken } from "./wallet.js";
 import { studyTopLPers } from "./study.js";
-import { addLesson, clearAllLessons, clearPerformance, removeLessonsByKeyword, getPerformanceHistory, pinLesson, unpinLesson, listLessons } from "../lessons.js";
-import { setPositionInstruction } from "../state.js";
+import { addLesson, clearAllLessons, clearPerformance, removeLessonsByKeyword, getPerformanceHistory, pinLesson, unpinLesson, listLessons } from "../storage/lessons.js";
+import { setPositionInstruction } from "../storage/state.js";
 
-import { getPoolMemory, addPoolNote } from "../pool-memory.js";
-import { addStrategy, listStrategies, getStrategy, setActiveStrategy, removeStrategy } from "../strategy-library.js";
-import { addToBlacklist, removeFromBlacklist, listBlacklist } from "../token-blacklist.js";
-import { addSmartWallet, removeSmartWallet, listSmartWallets, checkSmartWalletsOnPool } from "../smart-wallets.js";
+import { getPoolMemory, addPoolNote } from "../storage/pool-memory.js";
+import { addStrategy, listStrategies, getStrategy, setActiveStrategy, removeStrategy } from "../storage/strategy-library.js";
+import { addToBlacklist, removeFromBlacklist, listBlacklist } from "../storage/token-blacklist.js";
+import { addSmartWallet, removeSmartWallet, listSmartWallets, checkSmartWalletsOnPool } from "../storage/smart-wallets.js";
 import { getTokenInfo, getTokenHolders, getTokenNarrative } from "./token.js";
 import { config, reloadScreeningThresholds } from "../config.js";
 import fs from "fs";
@@ -27,8 +27,8 @@ import { execSync, spawn } from "child_process";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const USER_CONFIG_PATH = path.join(__dirname, "../user-config.json");
-import { log, logAction } from "../logger.js";
-import { notifyDeploy, notifyClose, notifySwap } from "../telegram.js";
+import { log, logAction } from "../integrations/logger.js";
+import { notifyDeploy, notifyClose, notifySwap } from "../integrations/telegram.js";
 
 // Registered by index.js so update_config can restart cron jobs when intervals change
 let _cronRestarter = null;
@@ -67,7 +67,7 @@ const toolMap = {
     try {
       const result = execSync("git pull", { cwd: process.cwd(), encoding: "utf8" }).trim();
       if (result.includes("Already up to date")) {
-        return { success: true, updated: false, message: "Already up to date — no restart needed." };
+        return { success: true, updated: false, message: "Already up to date  no restart needed." };
       }
       // Delay restart so this tool response (and Telegram message) gets sent first
       setTimeout(() => {
@@ -122,7 +122,7 @@ const toolMap = {
     return { error: "invalid mode" };
   },
   update_config: ({ changes, reason = "" }) => {
-    // Flat key → config section mapping (covers everything in config.js)
+    // Flat key  config section mapping (covers everything in config.js)
     const CONFIG_MAP = {
       // screening
       minFeeActiveTvlRatio: ["screening", "minFeeActiveTvlRatio"],
@@ -183,7 +183,7 @@ const toolMap = {
     }
 
     if (Object.keys(applied).length === 0) {
-      log("config", `update_config failed — unknown keys: ${JSON.stringify(unknown)}, raw changes: ${JSON.stringify(changes)}`);
+      log("config", `update_config failed  unknown keys: ${JSON.stringify(unknown)}, raw changes: ${JSON.stringify(changes)}`);
       return { success: false, unknown, reason };
     }
 
@@ -192,7 +192,7 @@ const toolMap = {
       const [section, field] = CONFIG_MAP[key];
       const before = config[section][field];
       config[section][field] = val;
-      log("config", `update_config: config.${section}.${field} ${before} → ${val} (verify: ${config[section][field]})`);
+      log("config", `update_config: config.${section}.${field} ${before}  ${val} (verify: ${config[section][field]})`);
     }
 
     // Persist to user-config.json
@@ -208,10 +208,10 @@ const toolMap = {
     const intervalChanged = applied.managementIntervalMin != null || applied.screeningIntervalMin != null;
     if (intervalChanged && _cronRestarter) {
       _cronRestarter();
-      log("config", `Cron restarted — management: ${config.schedule.managementIntervalMin}m, screening: ${config.schedule.screeningIntervalMin}m`);
+      log("config", `Cron restarted  management: ${config.schedule.managementIntervalMin}m, screening: ${config.schedule.screeningIntervalMin}m`);
     }
 
-    // Save as a lesson — but skip ephemeral per-deploy interval changes
+    // Save as a lesson  but skip ephemeral per-deploy interval changes
     // (managementIntervalMin / screeningIntervalMin change every deploy based on volatility;
     //  the rule is already in the system prompt, storing it 75+ times is pure noise)
     const lessonsKeys = Object.keys(applied).filter(
@@ -219,10 +219,10 @@ const toolMap = {
     );
     if (lessonsKeys.length > 0) {
       const summary = lessonsKeys.map(k => `${k}=${applied[k]}`).join(", ");
-      addLesson(`[SELF-TUNED] Changed ${summary} — ${reason}`, ["self_tune", "config_change"]);
+      addLesson(`[SELF-TUNED] Changed ${summary}  ${reason}`, ["self_tune", "config_change"]);
     }
 
-    log("config", `Agent self-tuned: ${JSON.stringify(applied)} — ${reason}`);
+    log("config", `Agent self-tuned: ${JSON.stringify(applied)}  ${reason}`);
     return { success: true, applied, unknown, reason };
   },
 };
@@ -241,7 +241,7 @@ const WRITE_TOOLS = new Set([
 export async function executeTool(name, args) {
   const startTime = Date.now();
 
-  // ─── Validate tool exists ─────────────────
+  //  Validate tool exists 
   const fn = toolMap[name];
   if (!fn) {
     const error = `Unknown tool: ${name}`;
@@ -249,7 +249,7 @@ export async function executeTool(name, args) {
     return { error };
   }
 
-  // ─── Pre-execution safety checks ──────────
+  //  Pre-execution safety checks 
   if (WRITE_TOOLS.has(name)) {
     const safetyCheck = await runSafetyChecks(name, args);
     if (!safetyCheck.pass) {
@@ -261,7 +261,7 @@ export async function executeTool(name, args) {
     }
   }
 
-  // ─── Execute ──────────────────────────────
+  //  Execute 
   try {
     const result = await fn(args);
     const duration = Date.now() - startTime;
@@ -345,7 +345,7 @@ async function runSafetyChecks(name, args) {
         };
       }
 
-      // Check position count limit + duplicate pool guard — force fresh scan to avoid stale cache
+      // Check position count limit + duplicate pool guard  force fresh scan to avoid stale cache
       const positions = await getMyPositions({ force: true });
       if (positions.total_positions >= config.risk.maxPositions) {
         return {
@@ -414,7 +414,7 @@ async function runSafetyChecks(name, args) {
     }
 
     case "swap_token": {
-      // Basic check — prevent swapping when DRY_RUN is true
+      // Basic check  prevent swapping when DRY_RUN is true
       // (handled inside swapToken itself, but belt-and-suspenders)
       return { pass: true };
     }
@@ -434,3 +434,5 @@ function summarizeResult(result) {
   }
   return result;
 }
+
+

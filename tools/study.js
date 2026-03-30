@@ -1,6 +1,6 @@
 /**
  * Study top LPers for a pool and extract behavioural patterns.
- * Used by the /learn command — not called on every cycle.
+ * Used by the /learn command  not called on every cycle.
  */
 
 const LPAGENT_API = "https://api.lpagent.io/open-api/v1";
@@ -14,10 +14,10 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
  */
 export async function studyTopLPers({ pool_address, limit = 4 }) {
   if (!LPAGENT_KEY) {
-    return { pool: pool_address, message: "LPAGENT_API_KEY not set in .env — study_top_lpers is disabled.", patterns: [], lpers: [] };
+    return { pool: pool_address, message: "LPAGENT_API_KEY not set in .env  study_top_lpers is disabled.", patterns: [], lpers: [] };
   }
 
-  // ── 1. Top LPers for this pool ──────────────────────────────
+  //  1. Top LPers for this pool 
   const topRes = await fetch(
     `${LPAGENT_API}/pools/${pool_address}/top-lpers?sort_order=desc&page=1&limit=20`,
     { headers: { "x-api-key": LPAGENT_KEY } }
@@ -46,13 +46,13 @@ export async function studyTopLPers({ pool_address, limit = 4 }) {
   if (top.length === 0) {
     return {
       pool: pool_address,
-      message: "No credible LPers found (need ≥3 positions, ≥60% win rate, ≥$1k inflow).",
+      message: "No credible LPers found (need 3 positions, 60% win rate, $1k inflow).",
       patterns: [],
       historical_samples: [],
     };
   }
 
-  // ── 2. Historical positions for each top LPer ───────────────
+  //  2. Historical positions for each top LPer 
   const historicalSamples = [];
 
   for (const lper of top) {
@@ -97,7 +97,7 @@ export async function studyTopLPers({ pool_address, limit = 4 }) {
     }
   }
 
-  // ── 3. Aggregate patterns ────────────────────────────────────
+  //  3. Aggregate patterns 
   const patterns = {
     top_lper_count: top.length,
     avg_hold_hours: avg(top.map((l) => l.avg_age_hour).filter(isNum)),

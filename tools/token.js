@@ -72,7 +72,7 @@ export async function getTokenInfo({ query }) {
 
 /**
  * Get holder distribution for a token mint.
- * Fetches top 100 holders — caller decides how many to display.
+ * Fetches top 100 holders  caller decides how many to display.
  */
 export async function getTokenHolders({ mint, limit = 20 }) {
   // Fetch holders and total supply in parallel
@@ -110,7 +110,7 @@ export async function getTokenHolders({ mint, limit = 20 }) {
   const realHolders = mapped.filter((h) => !h.is_pool);
   const top10Pct = realHolders.slice(0, 10).reduce((s, h) => s + (Number(h.pct) || 0), 0);
 
-  // ─── Bundler Detection ────────────────────────────────────────
+  //  Bundler Detection 
   // common_funder: 2+ wallets funded by same address
   const funderGroups = {};
   for (const h of realHolders) {
@@ -122,7 +122,7 @@ export async function getTokenHolders({ mint, limit = 20 }) {
     Object.values(funderGroups).filter((g) => g.length >= 2).flat()
   );
 
-  // funded_same_window: funded within ±5000 slots of any other holder
+  // funded_same_window: funded within 5000 slots of any other holder
   const SLOT_WINDOW = 5000;
   const withSlots = realHolders.filter((h) => h.funding?.slot);
   const sorted = [...withSlots].sort((a, b) => a.funding.slot - b.funding.slot);
@@ -147,9 +147,9 @@ export async function getTokenHolders({ mint, limit = 20 }) {
 
   const totalBundlersPct = bundlers.reduce((s, b) => s + (Number(b.percentage) || 0), 0);
 
-  // ─── Smart Wallet / KOL Cross-reference ──────────────────────
-  // Use targeted holders endpoint — only returns matching wallets, no noise
-  const { listSmartWallets } = await import("../smart-wallets.js");
+  //  Smart Wallet / KOL Cross-reference 
+  // Use targeted holders endpoint  only returns matching wallets, no noise
+  const { listSmartWallets } = await import("../storage/smart-wallets.js");
   const { wallets: smartWallets } = listSmartWallets();
   let smartWalletsHolding = [];
 
@@ -219,3 +219,4 @@ export async function getTokenHolders({ mint, limit = 20 }) {
     holders: mapped,
   };
 }
+

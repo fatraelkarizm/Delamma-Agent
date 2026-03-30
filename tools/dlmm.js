@@ -7,7 +7,7 @@ import {
 import BN from "bn.js";
 import bs58 from "bs58";
 import { config } from "../config.js";
-import { log } from "../logger.js";
+import { log } from "../integrations/logger.js";
 import {
   trackPosition,
   markOutOfRange,
@@ -17,12 +17,12 @@ import {
   getTrackedPosition,
   minutesOutOfRange,
   syncOpenPositions,
-} from "../state.js";
-import { recordPerformance } from "../lessons.js";
+} from "../storage/state.js";
+import { recordPerformance } from "../storage/lessons.js";
 import { normalizeMint } from "./wallet.js";
 
-// ─── Lazy SDK loader ───────────────────────────────────────────
-// @meteora-ag/dlmm → @coral-xyz/anchor uses CJS directory imports
+//  Lazy SDK loader 
+// @meteora-ag/dlmm  @coral-xyz/anchor uses CJS directory imports
 // that break in ESM on Node 24. Dynamic import defers loading until
 // an actual on-chain call is needed (never triggered in dry-run).
 let _DLMM = null;
@@ -37,7 +37,7 @@ async function getDLMM() {
   return { DLMM: _DLMM, StrategyType: _StrategyType };
 }
 
-// ─── Lazy wallet/connection init ──────────────────────────────
+//  Lazy wallet/connection init 
 // Avoids crashing on import when WALLET_PRIVATE_KEY is not yet set
 // (e.g. during screening-only tests).
 let _connection = null;
@@ -61,7 +61,7 @@ function getWallet() {
   return _wallet;
 }
 
-// ─── Pool Cache ────────────────────────────────────────────────
+//  Pool Cache 
 const poolCache = new Map();
 
 async function getPool(poolAddress) {
@@ -76,7 +76,7 @@ async function getPool(poolAddress) {
 
 setInterval(() => poolCache.clear(), 5 * 60 * 1000);
 
-// ─── Get Active Bin ────────────────────────────────────────────
+//  Get Active Bin 
 export async function getActiveBin({ pool_address }) {
   pool_address = normalizeMint(pool_address);
   const pool = await getPool(pool_address);
@@ -89,7 +89,7 @@ export async function getActiveBin({ pool_address }) {
   };
 }
 
-// ─── Deploy Position ───────────────────────────────────────────
+//  Deploy Position 
 export async function deployPosition({
   pool_address,
   amount_sol, // legacy: will be used as amount_y if amount_y is not provided
@@ -126,7 +126,7 @@ export async function deployPosition({
         amount_y: amount_y || amount_sol || 0,
         wide_range: totalBins > 69,
       },
-      message: "DRY RUN — no transaction sent",
+      message: "DRY RUN  no transaction sent",
     };
   }
 
@@ -170,7 +170,7 @@ export async function deployPosition({
   const newPosition = Keypair.generate();
 
   log("deploy", `Pool: ${pool_address}`);
-  log("deploy", `Strategy: ${activeStrategy}, Bins: ${minBinId} to ${maxBinId} (${totalBins} bins${isWideRange ? " — WIDE RANGE" : ""})`);
+  log("deploy", `Strategy: ${activeStrategy}, Bins: ${minBinId} to ${maxBinId} (${totalBins} bins${isWideRange ? "  WIDE RANGE" : ""})`);
   log("deploy", `Amount: ${finalAmountX} X, ${finalAmountY} Y`);
   log("deploy", `Position: ${newPosition.publicKey.toString()}`);
 
@@ -178,7 +178,7 @@ export async function deployPosition({
     const txHashes = [];
 
     if (isWideRange) {
-      // ── Wide Range Path (>69 bins) ─────────────────────────────────
+      //  Wide Range Path (>69 bins) 
       // Solana limits inner instruction realloc to 10240 bytes, so we can't create
       // a large position in a single initializePosition ix.
       // Solution: createExtendedEmptyPosition (returns Transaction | Transaction[]),
@@ -215,7 +215,7 @@ export async function deployPosition({
         log("deploy", `Add liquidity tx ${i + 1}/${addTxArray.length}: ${txHash}`);
       }
     } else {
-      // ── Standard Path (≤69 bins) ─────────────────────────────────
+      //  Standard Path (69 bins) 
       const tx = await pool.initializePositionAndAddLiquidityByStrategy({
         positionPubKey: newPosition.publicKey,
         user: wallet.publicKey,
@@ -228,7 +228,7 @@ export async function deployPosition({
       txHashes.push(txHash);
     }
 
-    log("deploy", `SUCCESS — ${txHashes.length} tx(s): ${txHashes[0]}`);
+    log("deploy", `SUCCESS  ${txHashes.length} tx(s): ${txHashes[0]}`);
 
     _positionsCacheAt = 0;
     trackPosition({
@@ -252,7 +252,7 @@ export async function deployPosition({
     const minPrice = activePrice * Math.pow(1 + actualBinStep / 10000, minBinId - activeBin.binId);
     const maxPrice = activePrice * Math.pow(1 + actualBinStep / 10000, maxBinId - activeBin.binId);
 
-    // Read base fee directly from pool — baseFactor * binStep / 10^6 gives fee in %
+    // Read base fee directly from pool  baseFactor * binStep / 10^6 gives fee in %
     const baseFactor = pool.lbPair.parameters?.baseFactor ?? 0;
     const actualBaseFee = base_fee ?? (baseFactor > 0 ? parseFloat((baseFactor * actualBinStep / 1e6 * 100).toFixed(4)) : null);
 
@@ -283,7 +283,7 @@ let _positionsCache = null;
 let _positionsCacheAt = 0;
 let _positionsInflight = null; // deduplicates concurrent calls
 
-// ─── Fetch DLMM PnL API for all positions in a pool ────────────
+//  Fetch DLMM PnL API for all positions in a pool 
 async function fetchDlmmPnlForPool(poolAddress, walletAddress) {
   const url = `https://dlmm.datapi.meteora.ag/positions/${poolAddress}/pnl?user=${walletAddress}&status=open&pageSize=100&page=1`;
   try {
@@ -296,7 +296,7 @@ async function fetchDlmmPnlForPool(poolAddress, walletAddress) {
     const data = await res.json();
     const positions = data.positions || data.data || [];
     if (positions.length === 0) {
-      log("pnl_api", `No positions returned for pool ${poolAddress.slice(0, 8)} — keys: ${Object.keys(data).join(", ")}`);
+      log("pnl_api", `No positions returned for pool ${poolAddress.slice(0, 8)}  keys: ${Object.keys(data).join(", ")}`);
     }
     const byAddress = {};
     for (const p of positions) {
@@ -310,7 +310,7 @@ async function fetchDlmmPnlForPool(poolAddress, walletAddress) {
   }
 }
 
-// ─── Get Position PnL (Meteora API) ─────────────────────────────
+//  Get Position PnL (Meteora API) 
 export async function getPositionPnl({ pool_address, position_address }) {
   pool_address = normalizeMint(pool_address);
   position_address = normalizeMint(position_address);
@@ -341,7 +341,7 @@ export async function getPositionPnl({ pool_address, position_address }) {
   }
 }
 
-// ─── Get My Positions ──────────────────────────────────────────
+//  Get My Positions 
 export async function getMyPositions({ force = false } = {}) {
   if (!force && _positionsCache && Date.now() - _positionsCacheAt < POSITIONS_CACHE_TTL) {
     return _positionsCache;
@@ -452,7 +452,7 @@ export async function getMyPositions({ force = false } = {}) {
   return _positionsInflight;
 }
 
-// ─── Get Positions for Any Wallet ─────────────────────────────
+//  Get Positions for Any Wallet 
 export async function getWalletPositions({ wallet_address }) {
   try {
     const DLMM_PROGRAM = new PublicKey("LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo");
@@ -501,7 +501,7 @@ export async function getWalletPositions({ wallet_address }) {
   }
 }
 
-// ─── Search Pools by Query ─────────────────────────────────────
+//  Search Pools by Query 
 export async function searchPools({ query, limit = 10 }) {
   const url = `https://dlmm.datapi.meteora.ag/pools?query=${encodeURIComponent(query)}`;
   const res = await fetch(url);
@@ -524,11 +524,11 @@ export async function searchPools({ query, limit = 10 }) {
   };
 }
 
-// ─── Claim Fees ────────────────────────────────────────────────
+//  Claim Fees 
 export async function claimFees({ position_address }) {
   position_address = normalizeMint(position_address);
   if (process.env.DRY_RUN === "true") {
-    return { dry_run: true, would_claim: position_address, message: "DRY RUN — no transaction sent" };
+    return { dry_run: true, would_claim: position_address, message: "DRY RUN  no transaction sent" };
   }
 
   try {
@@ -546,7 +546,7 @@ export async function claimFees({ position_address }) {
     });
 
     if (!txs || txs.length === 0) {
-      return { success: false, error: "No fees to claim — transaction is empty" };
+      return { success: false, error: "No fees to claim  transaction is empty" };
     }
 
     const txHashes = [];
@@ -565,11 +565,11 @@ export async function claimFees({ position_address }) {
   }
 }
 
-// ─── Close Position ────────────────────────────────────────────
+//  Close Position 
 export async function closePosition({ position_address }) {
   position_address = normalizeMint(position_address);
   if (process.env.DRY_RUN === "true") {
-    return { dry_run: true, would_close: position_address, message: "DRY RUN — no transaction sent" };
+    return { dry_run: true, would_close: position_address, message: "DRY RUN  no transaction sent" };
   }
 
   try {
@@ -584,7 +584,7 @@ export async function closePosition({ position_address }) {
 
     const txHashes = [];
 
-    // ─── Step 1: Claim Fees (to clear account state) ───────────
+    //  Step 1: Claim Fees (to clear account state) 
     try {
       log("close", `Step 1: Claiming fees for ${position_address}`);
       const positionData = await pool.getPosition(positionPubKey);
@@ -603,7 +603,7 @@ export async function closePosition({ position_address }) {
       log("close_warn", `Step 1 (Claim) failed or nothing to claim: ${e.message}`);
     }
 
-    // ─── Step 2: Remove Liquidity & Close ──────────────────────
+    //  Step 2: Remove Liquidity & Close 
     log("close", `Step 2: Removing liquidity and closing account`);
     const closeTx = await pool.removeLiquidity({
       user: wallet.publicKey,
@@ -632,7 +632,7 @@ export async function closePosition({ position_address }) {
         minutesOOR = Math.floor((Date.now() - new Date(tracked.out_of_range_since).getTime()) / 60000);
       }
 
-      // Snapshot PnL from cache BEFORE invalidating — this was the last known state before close
+      // Snapshot PnL from cache BEFORE invalidating  this was the last known state before close
       let pnlUsd = 0;
       let pnlPct = 0;
       let finalValueUsd = 0;
@@ -677,7 +677,7 @@ export async function closePosition({ position_address }) {
   }
 }
 
-// ─── Helpers ──────────────────────────────────────────────────
+//  Helpers 
 async function lookupPoolForPosition(position_address, walletAddress) {
   // Check state registry first (fast path)
   const tracked = getTrackedPosition(position_address);
@@ -702,3 +702,5 @@ async function lookupPoolForPosition(position_address, walletAddress) {
 
   throw new Error(`Position ${position_address} not found in open positions`);
 }
+
+

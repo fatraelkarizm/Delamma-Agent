@@ -10,9 +10,19 @@ node_modules/
 user-config.json
 
 # Runtime state (position tracking, lessons — user-specific)
+data/state.json
+data/lessons.json
+data/smart-wallets.json
+data/saas-users.json
+data/pool-memory.json
+data/token-blacklist.json
+data/strategy-library.json
+
+# Legacy root runtime files (kept for backward compatibility)
 state.json
 lessons.json
 smart-wallets.json
+saas-users.json
 pool-memory.json
 token-blacklist.json
 strategy-library.json

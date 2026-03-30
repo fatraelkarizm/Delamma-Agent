@@ -1,4 +1,4 @@
-# Meridian — CLAUDE.md
+# Meridian  CLAUDE.md
 
 Autonomous DLMM liquidity provider agent for Meteora pools on Solana.
 
@@ -8,23 +8,29 @@ Autonomous DLMM liquidity provider agent for Meteora pools on Solana.
 
 ```
 index.js            Main entry: REPL + cron orchestration + Telegram bot polling
-agent.js            ReAct loop (OpenRouter/OpenAI-compatible): LLM → tool call → repeat
+agent.js            ReAct loop (OpenRouter/OpenAI-compatible): LLM  tool call  repeat
 config.js           Runtime config from user-config.json + .env; exposes config object
 prompt.js           Builds system prompt per agent role (SCREENER / MANAGER / GENERAL)
-state.js            Position registry (state.json): tracks bin ranges, OOR timestamps, notes
-lessons.js          Learning engine: records closed-position perf, derives lessons, evolves thresholds
-pool-memory.js      Per-pool deploy history + snapshots (pool-memory.json)
-strategy-library.js Saved LP strategies (strategy-library.json)
 briefing.js         Daily Telegram briefing (HTML)
-telegram.js         Telegram bot: polling, notifications (deploy/close/swap/OOR)
-hive-mind.js        Optional collective intelligence server sync
-smart-wallets.js    KOL/alpha wallet tracker (smart-wallets.json)
-token-blacklist.js  Permanent token blacklist (token-blacklist.json)
-logger.js           Daily-rotating log files + action audit trail
+
+storage/
+  state.js            Position registry (data/state.json)
+  lessons.js          Learning engine + threshold evolution (data/lessons.json)
+  pool-memory.js      Per-pool deploy history + snapshots (data/pool-memory.json)
+  strategy-library.js Saved LP strategies (data/strategy-library.json)
+  smart-wallets.js    KOL/alpha wallet tracker (data/smart-wallets.json)
+  token-blacklist.js  Permanent token blacklist (data/token-blacklist.json)
+  saas-users.js       Telegram SaaS users + wallet binding (data/saas-users.json)
+  storage-paths.js    Centralized data path resolver + legacy migration helper
+
+integrations/
+  telegram.js         Telegram bot polling + callbacks + notifications
+  hive-mind.js        Optional collective intelligence server sync
+  logger.js           Daily-rotating log files + action audit trail
 
 tools/
   definitions.js    Tool schemas in OpenAI format (what LLM sees)
-  executor.js       Tool dispatch: name → fn, safety checks, pre/post hooks
+  executor.js       Tool dispatch: name  fn, safety checks, pre/post hooks
   dlmm.js           Meteora DLMM SDK wrapper (deploy, close, claim, positions, PnL)
   screening.js      Pool discovery from Meteora API
   wallet.js         SOL/token balances (Helius) + Jupiter swap
@@ -50,9 +56,9 @@ Sets defined in `agent.js:6-7`. If you add a tool, also add it to the relevant s
 
 ## Adding a New Tool
 
-1. **`tools/definitions.js`** — Add OpenAI-format schema object to the `tools` array
-2. **`tools/executor.js`** — Add `tool_name: functionImpl` to `toolMap`
-3. **`agent.js`** — Add tool name to `MANAGER_TOOLS` and/or `SCREENER_TOOLS` if role-restricted
+1. **`tools/definitions.js`**  Add OpenAI-format schema object to the `tools` array
+2. **`tools/executor.js`**  Add `tool_name: functionImpl` to `toolMap`
+3. **`agent.js`**  Add tool name to `MANAGER_TOOLS` and/or `SCREENER_TOOLS` if role-restricted
 4. If the tool writes on-chain state, add it to `WRITE_TOOLS` in executor.js for safety checks
 
 ---
@@ -92,16 +98,16 @@ Sets defined in `agent.js:6-7`. If you add a tool, also add it to the relevant s
 | screeningIntervalMin | schedule | 30 |
 | managementModel / screeningModel / generalModel | llm | openrouter/healer-alpha |
 
-**`computeDeployAmount(walletSol)`** — scales position size with wallet balance (compounding). Formula: `clamp(deployable × positionSizePct, floor=deployAmountSol, ceil=maxDeployAmount)`.
+**`computeDeployAmount(walletSol)`**  scales position size with wallet balance (compounding). Formula: `clamp(deployable  positionSizePct, floor=deployAmountSol, ceil=maxDeployAmount)`.
 
 ---
 
 ## Position Lifecycle
 
-1. **Deploy**: `deploy_position` → executor safety checks → `trackPosition()` in state.js → Telegram notify
-2. **Monitor**: management cron → `getMyPositions()` → `getPositionPnl()` → OOR detection → pool-memory snapshots
-3. **Close**: `close_position` → `recordPerformance()` in lessons.js → auto-swap base token to SOL → Telegram notify
-4. **Learn**: `evolveThresholds()` runs on performance data → updates config.screening → persists to user-config.json
+1. **Deploy**: `deploy_position`  executor safety checks  `trackPosition()` in `storage/state.js`  Telegram notify
+2. **Monitor**: management cron  `getMyPositions()`  `getPositionPnl()`  OOR detection  pool-memory snapshots
+3. **Close**: `close_position`  `recordPerformance()` in `storage/lessons.js`  auto-swap base token to SOL  Telegram notify
+4. **Learn**: `evolveThresholds()` runs on performance data  updates config.screening  persists to user-config.json
 
 ---
 
@@ -112,7 +118,7 @@ Before `deploy_position` executes:
 - Position count must be below `maxPositions` (force-fresh scan, no cache)
 - No duplicate pool allowed (same pool_address)
 - No duplicate base token allowed (same base_mint in another pool)
-- If `amount_x > 0`: strip `amount_y` and `amount_sol` (tokenX-only deploy — no SOL needed)
+- If `amount_x > 0`: strip `amount_y` and `amount_sol` (tokenX-only deploy  no SOL needed)
 - SOL balance must cover `amount_y + gasReserve` (skipped for tokenX-only)
 - `blockedLaunchpads` enforced in `getTopCandidates()` before LLM sees candidates
 
@@ -126,8 +132,8 @@ Linear formula based on pool volatility (set in screener prompt, `index.js`):
 bins_below = round(35 + (volatility / 5) * 34), clamped to [35, 69]
 ```
 
-- Low volatility (0) → 35 bins
-- High volatility (5+) → 69 bins
+- Low volatility (0)  35 bins
+- High volatility (5+)  69 bins
 - Any value in between is valid (continuous, not tiered)
 
 ---
@@ -142,7 +148,7 @@ Handled directly in `index.js` (bypass LLM):
 | `/close <n>` | Close position by list index |
 | `/set <n> <note>` | Set note on position by list index |
 
-Progress bar format: `[████████░░░░░░░░░░░░] 40%` (no bin numbers, no arrows)
+Progress bar format: `[] 40%` (no bin numbers, no arrows)
 
 ---
 
@@ -155,11 +161,11 @@ Progress bar format: `[████████░░░░░░░░░░░
 ## Bundler Detection (token.js)
 
 Two signals used in `getTokenHolders()`:
-- `common_funder` — multiple wallets funded by same source
-- `funded_same_window` — multiple wallets funded in same time window
+- `common_funder`  multiple wallets funded by same source
+- `funded_same_window`  multiple wallets funded in same time window
 
 **Thresholds in config**: `maxBundlersPct` (default 30%), `maxTop10Pct` (default 60%)
-Jupiter audit API: `botHoldersPercentage` (5–25% is normal for legitimate tokens)
+Jupiter audit API: `botHoldersPercentage` (525% is normal for legitimate tokens)
 
 ---
 
@@ -187,17 +193,17 @@ const actualBaseFee = baseFactor > 0
 
 ## Lessons System
 
-`lessons.js` records closed position performance and auto-derives lessons. Key points:
-- `getLessonsForPrompt({ agentType })` — injects relevant lessons into system prompt
-- `evolveThresholds()` — adjusts screening thresholds based on winners vs losers
+`storage/lessons.js` records closed position performance and auto-derives lessons. Key points:
+- `getLessonsForPrompt({ agentType })`  injects relevant lessons into system prompt
+- `evolveThresholds()`  adjusts screening thresholds based on winners vs losers
 - Performance recorded via `recordPerformance()` called from executor.js after `close_position`
-- **Known issue**: `evolveThresholds()` references `maxVolatility` and `minFeeTvlRatio` but config.js uses `minFeeActiveTvlRatio` and has no `maxVolatility` key — the evolution of these keys is a no-op
+- **Known issue**: `evolveThresholds()` references `maxVolatility` and `minFeeTvlRatio` but config.js uses `minFeeActiveTvlRatio` and has no `maxVolatility` key  the evolution of these keys is a no-op
 
 ---
 
 ## Hive Mind (hive-mind.js)
 
-Optional feature. Enabled by setting `HIVE_MIND_URL` and `HIVE_MIND_API_KEY` in `.env`.
+Optional feature. Implemented in `integrations/hive-mind.js`. Enabled by setting `HIVE_MIND_URL` and `HIVE_MIND_API_KEY` in `.env`.
 Syncs lessons/deploys to a shared server, queries consensus patterns.
 Not required for normal operation.
 
@@ -223,5 +229,5 @@ Not required for normal operation.
 
 ## Known Issues / Tech Debt
 
-- `lessons.js evolveThresholds()` evolves `maxVolatility` + `minFeeTvlRatio` (wrong key names — should be `minFeeActiveTvlRatio`; `maxVolatility` doesn't exist in config at all). The evolution is a no-op for those keys.
-- `get_wallet_positions` tool (dlmm.js) is in definitions.js but not in MANAGER_TOOLS or SCREENER_TOOLS — only available in GENERAL role.
+- `lessons.js evolveThresholds()` evolves `maxVolatility` + `minFeeTvlRatio` (wrong key names  should be `minFeeActiveTvlRatio`; `maxVolatility` doesn't exist in config at all). The evolution is a no-op for those keys.
+- `get_wallet_positions` tool (dlmm.js) is in definitions.js but not in MANAGER_TOOLS or SCREENER_TOOLS  only available in GENERAL role.
