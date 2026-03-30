@@ -4,7 +4,7 @@ import { fileURLToPath } from "url";
 import { log } from "./logger.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const USER_CONFIG_PATH = path.join(__dirname, "user-config.json");
+const USER_CONFIG_PATH = path.join(__dirname, "..", "user-config.json");
 
 const TOKEN = process.env.TELEGRAM_BOT_TOKEN || null;
 const BASE  = TOKEN ? `https://api.telegram.org/bot${TOKEN}` : null;
@@ -42,10 +42,13 @@ export function isEnabled() {
   return !!TOKEN;
 }
 
-export async function sendMessage(text) {
-  if (!TOKEN || !chatId) return;
+export function getOwnerChatId() {
+  return chatId ? String(chatId) : null;
+}
+
+export async function sendMessageToChat(targetChatId, text, extra = {}) {
+  if (!TOKEN || !targetChatId) return;
   try {
-    // Convert basic markdown to Telegram HTML
     let html = String(text)
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
@@ -61,17 +64,50 @@ export async function sendMessage(text) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        chat_id: chatId,
+        chat_id: targetChatId,
         text: html.slice(0, 4096),
         parse_mode: "HTML",
+        ...extra,
       }),
     });
     if (!res.ok) {
       const err = await res.text();
-      log("telegram_error", `sendMessage ${res.status}: ${err.slice(0, 100)}`);
+      log("telegram_error", `sendMessageToChat ${res.status}: ${err.slice(0, 100)}`);
     }
   } catch (e) {
-    log("telegram_error", `sendMessage failed: ${e.message}`);
+    log("telegram_error", `sendMessageToChat failed: ${e.message}`);
+  }
+}
+
+export async function sendMessage(text) {
+  await sendMessageToChat(chatId, text);
+}
+
+export async function sendInlineKeyboardToChat(targetChatId, text, inlineKeyboard) {
+  return sendMessageToChat(targetChatId, text, {
+    reply_markup: {
+      inline_keyboard: inlineKeyboard,
+    },
+  });
+}
+
+export async function answerCallbackQuery(callbackQueryId, text = "") {
+  if (!TOKEN || !callbackQueryId) return;
+  try {
+    const res = await fetch(`${BASE}/answerCallbackQuery`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        callback_query_id: callbackQueryId,
+        text: text ? String(text).slice(0, 200) : undefined,
+      }),
+    });
+    if (!res.ok) {
+      const err = await res.text();
+      log("telegram_error", `answerCallbackQuery ${res.status}: ${err.slice(0, 100)}`);
+    }
+  } catch (e) {
+    log("telegram_error", `answerCallbackQuery failed: ${e.message}`);
   }
 }
 
@@ -98,7 +134,7 @@ export async function sendHTML(html) {
 
 
 // ─── Long polling ────────────────────────────────────────────────
-async function poll(onMessage) {
+async function poll(onUpdate) {
   while (_polling) {
     try {
       const res = await fetch(
@@ -110,22 +146,38 @@ async function poll(onMessage) {
       for (const update of data.result || []) {
         _offset = update.update_id + 1;
         const msg = update.message;
-        if (!msg?.text) continue;
+        if (msg?.text) {
+          const incomingChatId = String(msg.chat.id);
 
-        const incomingChatId = String(msg.chat.id);
+          if (!chatId) {
+            chatId = incomingChatId;
+            saveChatId(chatId);
+            log("telegram", `Registered owner chat ID: ${chatId}`);
+            await sendMessage("Connected! Use /start to open menu.");
+          }
 
-        // Auto-register first sender as the owner
-        if (!chatId) {
-          chatId = incomingChatId;
-          saveChatId(chatId);
-          log("telegram", `Registered chat ID: ${chatId}`);
-          await sendMessage("Connected! I'm your LP agent. Ask me anything or use commands like /status.");
+          await onUpdate({
+            type: "message",
+            text: msg.text,
+            chatId: incomingChatId,
+            user: msg.from || null,
+            raw: update,
+          });
+          continue;
         }
 
-        // Only accept messages from the registered chat
-        if (incomingChatId !== chatId) continue;
-
-        await onMessage(msg.text);
+        const cb = update.callback_query;
+        if (cb?.data) {
+          await onUpdate({
+            type: "callback",
+            data: cb.data,
+            callbackQueryId: cb.id,
+            chatId: String(cb.message?.chat?.id || cb.from?.id || ""),
+            user: cb.from || null,
+            messageId: cb.message?.message_id || null,
+            raw: update,
+          });
+        }
       }
     } catch (e) {
       if (!e.message?.includes("aborted")) {
@@ -136,10 +188,10 @@ async function poll(onMessage) {
   }
 }
 
-export function startPolling(onMessage) {
+export function startPolling(onUpdate) {
   if (!TOKEN) return;
   _polling = true;
-  poll(onMessage); // fire-and-forget
+  poll(onUpdate); // fire-and-forget
   log("telegram", "Bot polling started");
 }
 

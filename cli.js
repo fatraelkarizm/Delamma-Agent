@@ -174,7 +174,7 @@ switch (subcommand) {
     const positionAddress = flags.position || posAddr;
     if (!positionAddress) die("Usage: meridian pnl <position_address>");
 
-    const { getTrackedPosition } = await import("./state.js");
+    const { getTrackedPosition } = await import("./storage/state.js");
     const { getPositionPnl, getMyPositions } = await import("./tools/dlmm.js");
 
     let poolAddress;
@@ -198,8 +198,8 @@ switch (subcommand) {
     const { getTopCandidates } = await import("./tools/screening.js");
     const { getActiveBin } = await import("./tools/dlmm.js");
     const { getTokenInfo, getTokenHolders, getTokenNarrative } = await import("./tools/token.js");
-    const { checkSmartWalletsOnPool } = await import("./smart-wallets.js");
-    const { recallForPool } = await import("./pool-memory.js");
+    const { checkSmartWalletsOnPool } = await import("./storage/smart-wallets.js");
+    const { recallForPool } = await import("./storage/pool-memory.js");
 
     const limit = parseInt(flags.limit || "5");
     const raw = await getTopCandidates({ limit });
@@ -322,7 +322,7 @@ switch (subcommand) {
   // ── config ───────────────────────────────────────────────────────
   case "config": {
     if (sub2 === "get" || !sub2) {
-      const { config } = await import("./config.js");
+      const { config } = await import("./core/config.js");
       out(config);
     } else if (sub2 === "set") {
       const key = argv.filter(a => !a.startsWith("-"))[2];

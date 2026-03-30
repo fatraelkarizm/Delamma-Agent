@@ -210,7 +210,7 @@ Meridian includes an **opt-in** collective intelligence system called **Hive Min
 **2. Register your agent**
 
 ```bash
-node -e "import('./hive-mind.js').then(m => m.register('https://meridian-hive-api-production.up.railway.app', 'YOUR_TOKEN'))"
+node -e "import('./integrations/hive-mind.js').then(m => m.register('https://meridian-hive-api-production.up.railway.app', 'YOUR_TOKEN'))"
 ```
 
 Replace `YOUR_TOKEN` with the registration token from Telegram.

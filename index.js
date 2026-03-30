@@ -1,21 +1,34 @@
 import "dotenv/config";
 import cron from "node-cron";
 import readline from "readline";
-import { agentLoop } from "./agent.js";
-import { log } from "./logger.js";
+import { PublicKey } from "@solana/web3.js";
+import { agentLoop } from "./core/agent.js";
+import { log } from "./integrations/logger.js";
 import { getMyPositions, getPositionPnl, closePosition } from "./tools/dlmm.js";
 import { getWalletBalances } from "./tools/wallet.js";
 import { getTopCandidates } from "./tools/screening.js";
-import { config, reloadScreeningThresholds, computeDeployAmount } from "./config.js";
-import { evolveThresholds, getPerformanceSummary } from "./lessons.js";
+import { config, reloadScreeningThresholds, computeDeployAmount } from "./core/config.js";
+import { evolveThresholds, getPerformanceSummary } from "./storage/lessons.js";
 import { registerCronRestarter } from "./tools/executor.js";
-import { startPolling, stopPolling, sendMessage, sendHTML, notifyOutOfRange, isEnabled as telegramEnabled } from "./telegram.js";
-import { generateBriefing } from "./briefing.js";
-import { getLastBriefingDate, setLastBriefingDate, getTrackedPosition, setPositionInstruction } from "./state.js";
-import { getActiveStrategy } from "./strategy-library.js";
-import { recordPositionSnapshot, recallForPool } from "./pool-memory.js";
-import { checkSmartWalletsOnPool } from "./smart-wallets.js";
+import {
+  startPolling,
+  stopPolling,
+  sendMessage,
+  sendHTML,
+  notifyOutOfRange,
+  isEnabled as telegramEnabled,
+  sendMessageToChat,
+  sendInlineKeyboardToChat,
+  answerCallbackQuery,
+  getOwnerChatId,
+} from "./integrations/telegram.js";
+import { generateBriefing } from "./core/briefing.js";
+import { getLastBriefingDate, setLastBriefingDate, getTrackedPosition, setPositionInstruction } from "./storage/state.js";
+import { getActiveStrategy } from "./storage/strategy-library.js";
+import { recordPositionSnapshot, recallForPool } from "./storage/pool-memory.js";
+import { checkSmartWalletsOnPool } from "./storage/smart-wallets.js";
 import { getTokenHolders, getTokenNarrative, getTokenInfo } from "./tools/token.js";
+import { upsertTelegramUser, getSaasUser, setPendingAction, setWalletAddress, touchUsage } from "./storage/saas-users.js";
 
 log("startup", "DLMM LP Agent starting...");
 log("startup", `Mode: ${process.env.DRY_RUN === "true" ? "DRY RUN" : "LIVE"}`);
@@ -157,7 +170,7 @@ export async function runManagementCycle({ silent = false } = {}) {
       // Hive mind pattern consensus (if enabled)
       let hivePatterns = "";
       try {
-        const hiveMind = await import("./hive-mind.js");
+        const hiveMind = await import("./integrations/hive-mind.js");
         if (hiveMind.isEnabled()) {
           const patterns = await hiveMind.queryPatternConsensus();
           const significant = (patterns || []).filter(p => p.count >= 10);
@@ -310,7 +323,7 @@ export async function runScreeningCycle({ silent = false } = {}) {
 
       // Hive mind consensus (if enabled)
       try {
-        const hiveMind = await import("./hive-mind.js");
+        const hiveMind = await import("./integrations/hive-mind.js");
         if (hiveMind.isEnabled()) {
           const poolAddrs = candidates.map(c => c.pool).filter(Boolean);
           if (poolAddrs.length > 0) {
@@ -534,10 +547,203 @@ if (isTTY) {
   launchCron();
   maybeRunMissedBriefing().catch(() => {});
 
-  // Telegram bot
-  startPolling(async (text) => {
+  const saasMenu = [
+    [{ text: "What is Meridian?", callback_data: "saas:about" }],
+    [{ text: "Bind Wallet", callback_data: "saas:bind_wallet" }],
+    [{ text: "My Wallet", callback_data: "saas:my_wallet" }, { text: "Usage", callback_data: "saas:usage" }],
+    [{ text: "Subscription", callback_data: "saas:subscription" }, { text: "Upgrade Plan", callback_data: "saas:upgrade" }],
+    [{ text: "Help", callback_data: "saas:help" }],
+  ];
+
+  function parseSolanaAddress(raw) {
+    const candidate = String(raw || "").trim();
+    if (!candidate) return null;
+    try {
+      const pk = new PublicKey(candidate);
+      return pk.toBase58();
+    } catch {
+      return null;
+    }
+  }
+
+  async function sendSaasHome(chatId, userRecord) {
+    const walletLabel = userRecord?.walletAddress || "No wallet bound yet";
+    const sub = userRecord?.subscription || {};
+    await sendInlineKeyboardToChat(
+      chatId,
+      [
+        "Welcome to Meridian SaaS Bot",
+        "",
+        "Meridian helps you monitor wallet activity, positions, and prepares subscription-based access.",
+        "This bot is button-first, no command typing needed.",
+        "",
+        `Wallet: ${walletLabel}`,
+        `Plan: ${sub.plan || "trial"} (${sub.status || "active"})`,
+      ].join("\n"),
+      saasMenu
+    );
+  }
+
+  async function handleSaasCallback(update) {
+    const chatId = update.chatId;
+    const tgUser = update.user;
+    if (!chatId || !tgUser?.id) return;
+
+    upsertTelegramUser({ chatId, user: tgUser });
+    touchUsage(tgUser.id, "menuClicks");
+    await answerCallbackQuery(update.callbackQueryId);
+
+    const userRecord = getSaasUser(tgUser.id);
+    const data = update.data;
+
+    if (data === "saas:about") {
+      await sendInlineKeyboardToChat(
+        chatId,
+        [
+          "Meridian is an autonomous DLMM assistant for Solana.",
+          "",
+          "For SaaS users, this bot will be used for:",
+          "- wallet binding",
+          "- usage tracking",
+          "- subscription lifecycle",
+          "",
+          "Tap menu below to continue.",
+        ].join("\n"),
+        saasMenu
+      );
+      return;
+    }
+
+    if (data === "saas:bind_wallet") {
+      setPendingAction(tgUser.id, "bind_wallet");
+      await sendMessageToChat(chatId, "Send your Solana wallet address now.");
+      return;
+    }
+
+    if (data === "saas:my_wallet") {
+      await sendInlineKeyboardToChat(chatId, `Your wallet:\n${userRecord?.walletAddress || "No wallet bound yet"}`, saasMenu);
+      return;
+    }
+
+    if (data === "saas:usage") {
+      const usage = userRecord?.usage || {};
+      await sendInlineKeyboardToChat(
+        chatId,
+        [
+          "Usage Summary",
+          `Interactions: ${usage.interactions || 0}`,
+          `Menu clicks: ${usage.menuClicks || 0}`,
+          `Last active: ${usage.lastActiveAt || "-"}`,
+        ].join("\n"),
+        saasMenu
+      );
+      return;
+    }
+
+    if (data === "saas:subscription") {
+      const sub = userRecord?.subscription || {};
+      await sendInlineKeyboardToChat(
+        chatId,
+        [
+          "Subscription",
+          `Plan: ${sub.plan || "trial"}`,
+          `Status: ${sub.status || "active"}`,
+          `Started: ${sub.startedAt || "-"}`,
+          `Expires: ${sub.expiresAt || "-"}`,
+        ].join("\n"),
+        saasMenu
+      );
+      return;
+    }
+
+    if (data === "saas:upgrade") {
+      await sendInlineKeyboardToChat(
+        chatId,
+        "Pick a plan to request activation:",
+        [
+          [{ text: "Starter - $19/mo", callback_data: "saas:plan:starter" }],
+          [{ text: "Pro - $49/mo", callback_data: "saas:plan:pro" }],
+          [{ text: "Elite - $99/mo", callback_data: "saas:plan:elite" }],
+          [{ text: "Back", callback_data: "saas:home" }],
+        ]
+      );
+      return;
+    }
+
+    if (data.startsWith("saas:plan:")) {
+      const plan = data.split(":")[2] || "starter";
+      await sendInlineKeyboardToChat(chatId, `Upgrade request received: ${plan.toUpperCase()}. Admin will follow up.`, saasMenu);
+      return;
+    }
+
+    if (data === "saas:help") {
+      await sendInlineKeyboardToChat(
+        chatId,
+        [
+          "How to use",
+          "1. Tap Bind Wallet",
+          "2. Send your Solana address",
+          "3. Check Usage and Subscription from menu",
+          "",
+          "Use /start any time to open this menu again.",
+        ].join("\n"),
+        saasMenu
+      );
+      return;
+    }
+
+    if (data === "saas:home") {
+      await sendSaasHome(chatId, userRecord);
+      return;
+    }
+
+    await sendInlineKeyboardToChat(chatId, "Unknown action.", saasMenu);
+  }
+
+  // Telegram bot (event-based)
+  startPolling(async (update) => {
+    const chatId = update.chatId;
+    const tgUser = update.user;
+    if (!chatId || !tgUser?.id) return;
+
+    upsertTelegramUser({ chatId, user: tgUser });
+    touchUsage(tgUser.id, "interactions");
+
+    if (update.type === "callback") {
+      await handleSaasCallback(update);
+      return;
+    }
+
+    const text = String(update.text || "").trim();
+    const userRecord = getSaasUser(tgUser.id);
+
+    if (text === "/start" || text === "/menu") {
+      if (text === "/start") touchUsage(tgUser.id, "startCount");
+      await sendSaasHome(chatId, userRecord);
+      return;
+    }
+
+    if (userRecord?.pendingAction === "bind_wallet") {
+      const wallet = parseSolanaAddress(text);
+      if (!wallet) {
+        await sendMessageToChat(chatId, "Invalid wallet. Please send a valid Solana address.");
+        return;
+      }
+      setWalletAddress(tgUser.id, wallet);
+      await sendInlineKeyboardToChat(chatId, `Wallet bound successfully:\n${wallet}`, saasMenu);
+      return;
+    }
+
+    const ownerChatId = getOwnerChatId();
+    const isOwner = !!ownerChatId && String(ownerChatId) === String(chatId);
+
+    if (!isOwner) {
+      await sendInlineKeyboardToChat(chatId, "Please use buttons below to continue.", saasMenu);
+      return;
+    }
+
     if (_managementBusy || _screeningBusy || busy) {
-      sendMessage("Agent is busy right now — try again in a moment.").catch(() => {});
+      await sendMessageToChat(chatId, "Agent is busy right now, try again in a moment.");
       return;
     }
 
@@ -546,7 +752,7 @@ if (isTTY) {
         const briefing = await generateBriefing();
         await sendHTML(briefing);
       } catch (e) {
-        await sendMessage(`Error: ${e.message}`).catch(() => {});
+        await sendMessageToChat(chatId, `Error: ${e.message}`).catch(() => {});
       }
       return;
     }
@@ -554,15 +760,15 @@ if (isTTY) {
     if (text === "/positions") {
       try {
         const { positions, total_positions } = await getMyPositions({ force: true });
-        if (total_positions === 0) { await sendMessage("No open positions."); return; }
+        if (total_positions === 0) { await sendMessageToChat(chatId, "No open positions."); return; }
         const lines = positions.map((p, i) => {
           const pnl = p.pnl_usd >= 0 ? `+$${p.pnl_usd}` : `-$${Math.abs(p.pnl_usd)}`;
           const age = p.age_minutes != null ? `${p.age_minutes}m` : "?";
-          const oor = !p.in_range ? " ⚠️OOR" : "";
+          const oor = !p.in_range ? " OOR" : "";
           return `${i + 1}. ${p.pair} | $${p.total_value_usd} | PnL: ${pnl} | fees: $${p.unclaimed_fees_usd} | ${age}${oor}`;
         });
-        await sendMessage(`📊 Open Positions (${total_positions}):\n\n${lines.join("\n")}\n\n/close <n> to close | /set <n> <note> to set instruction`);
-      } catch (e) { await sendMessage(`Error: ${e.message}`).catch(() => {}); }
+        await sendMessageToChat(chatId, `Open Positions (${total_positions}):\n\n${lines.join("\n")}\n\n/close <n> | /set <n> <note>`);
+      } catch (e) { await sendMessageToChat(chatId, `Error: ${e.message}`).catch(() => {}); }
       return;
     }
 
@@ -571,16 +777,16 @@ if (isTTY) {
       try {
         const idx = parseInt(closeMatch[1]) - 1;
         const { positions } = await getMyPositions({ force: true });
-        if (idx < 0 || idx >= positions.length) { await sendMessage(`Invalid number. Use /positions first.`); return; }
+        if (idx < 0 || idx >= positions.length) { await sendMessageToChat(chatId, "Invalid number. Use /positions first."); return; }
         const pos = positions[idx];
-        await sendMessage(`Closing ${pos.pair}...`);
+        await sendMessageToChat(chatId, `Closing ${pos.pair}...`);
         const result = await closePosition({ position_address: pos.position });
         if (result.success) {
-          await sendMessage(`✅ Closed ${pos.pair}\nPnL: $${result.pnl_usd ?? "?"} | txs: ${result.txs?.join(", ")}`);
+          await sendMessageToChat(chatId, `Closed ${pos.pair}\nPnL: $${result.pnl_usd ?? "?"} | txs: ${result.txs?.join(", ")}`);
         } else {
-          await sendMessage(`❌ Close failed: ${JSON.stringify(result)}`);
+          await sendMessageToChat(chatId, `Close failed: ${JSON.stringify(result)}`);
         }
-      } catch (e) { await sendMessage(`Error: ${e.message}`).catch(() => {}); }
+      } catch (e) { await sendMessageToChat(chatId, `Error: ${e.message}`).catch(() => {}); }
       return;
     }
 
@@ -590,11 +796,11 @@ if (isTTY) {
         const idx = parseInt(setMatch[1]) - 1;
         const note = setMatch[2].trim();
         const { positions } = await getMyPositions({ force: true });
-        if (idx < 0 || idx >= positions.length) { await sendMessage(`Invalid number. Use /positions first.`); return; }
+        if (idx < 0 || idx >= positions.length) { await sendMessageToChat(chatId, "Invalid number. Use /positions first."); return; }
         const pos = positions[idx];
         setPositionInstruction(pos.position, note);
-        await sendMessage(`✅ Note set for ${pos.pair}:\n"${note}"`);
-      } catch (e) { await sendMessage(`Error: ${e.message}`).catch(() => {}); }
+        await sendMessageToChat(chatId, `Note set for ${pos.pair}:\n"${note}"`);
+      } catch (e) { await sendMessageToChat(chatId, `Error: ${e.message}`).catch(() => {}); }
       return;
     }
 
@@ -606,9 +812,9 @@ if (isTTY) {
       const agentRole = isDeployRequest ? "SCREENER" : "GENERAL";
       const { content } = await agentLoop(text, config.llm.maxSteps, sessionHistory, agentRole, config.llm.generalModel);
       appendHistory(text, content);
-      await sendMessage(content);
+      await sendMessageToChat(chatId, content);
     } catch (e) {
-      await sendMessage(`Error: ${e.message}`).catch(() => {});
+      await sendMessageToChat(chatId, `Error: ${e.message}`).catch(() => {});
     } finally {
       busy = false;
       rl.setPrompt(buildPrompt());

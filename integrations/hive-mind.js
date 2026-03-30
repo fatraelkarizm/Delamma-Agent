@@ -25,9 +25,9 @@ import path from "path";
 import { fileURLToPath } from "url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const USER_CONFIG_PATH = path.join(__dirname, "user-config.json");
-const LESSONS_FILE = path.join(__dirname, "lessons.json");
-const POOL_MEMORY_FILE = path.join(__dirname, "pool-memory.json");
+const USER_CONFIG_PATH = path.join(__dirname, "..", "user-config.json");
+const LESSONS_FILE = path.join(__dirname, "..", "lessons.json");
+const POOL_MEMORY_FILE = path.join(__dirname, "..", "pool-memory.json");
 
 const SYNC_DEBOUNCE_MS = 5 * 60 * 1000; // 5 minutes
 const GET_TIMEOUT_MS = 5_000;
@@ -174,7 +174,7 @@ export async function syncToHive() {
     // Agent stats via dynamic import (avoids circular deps)
     let agentStats = null;
     try {
-      const { getPerformanceSummary } = await import("./lessons.js");
+      const { getPerformanceSummary } = await import("../storage/lessons.js");
       agentStats = getPerformanceSummary();
     } catch (e) {
       console.log("[hive]", `Could not load agent stats: ${e.message}`);
