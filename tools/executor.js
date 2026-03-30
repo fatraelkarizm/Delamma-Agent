@@ -11,6 +11,7 @@ import {
 } from "./dlmm.js";
 import { getWalletBalances, swapToken } from "./wallet.js";
 import { studyTopLPers } from "./study.js";
+<<<<<<< HEAD
 import { addLesson, clearAllLessons, clearPerformance, removeLessonsByKeyword, getPerformanceHistory, pinLesson, unpinLesson, listLessons } from "../storage/lessons.js";
 import { setPositionInstruction } from "../storage/state.js";
 
@@ -18,17 +19,30 @@ import { getPoolMemory, addPoolNote } from "../storage/pool-memory.js";
 import { addStrategy, listStrategies, getStrategy, setActiveStrategy, removeStrategy } from "../storage/strategy-library.js";
 import { addToBlacklist, removeFromBlacklist, listBlacklist } from "../storage/token-blacklist.js";
 import { addSmartWallet, removeSmartWallet, listSmartWallets, checkSmartWalletsOnPool } from "../storage/smart-wallets.js";
+=======
+import { addLesson, clearAllLessons, clearPerformance, removeLessonsByKeyword, getPerformanceHistory, pinLesson, unpinLesson, listLessons } from "../memory/lessons.js";
+import { setPositionInstruction } from "../lib/state.js";
+
+import { getPoolMemory, addPoolNote } from "../memory/pool-memory.js";
+import { addStrategy, listStrategies, getStrategy, setActiveStrategy, removeStrategy } from "../memory/strategy-library.js";
+import { addToBlacklist, removeFromBlacklist, listBlacklist } from "../memory/token-blacklist.js";
+import { addSmartWallet, removeSmartWallet, listSmartWallets, checkSmartWalletsOnPool } from "../memory/smart-wallets.js";
+>>>>>>> b07f384154085a851f82648b474583c02562a015
 import { getTokenInfo, getTokenHolders, getTokenNarrative } from "./token.js";
-import { config, reloadScreeningThresholds } from "../config.js";
+import { config } from "../core/config.js";
 import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
 import { execSync, spawn } from "child_process";
+<<<<<<< HEAD
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const USER_CONFIG_PATH = path.join(__dirname, "../user-config.json");
 import { log, logAction } from "../integrations/logger.js";
 import { notifyDeploy, notifyClose, notifySwap } from "../integrations/telegram.js";
+=======
+import { log, logAction } from "../lib/logger.js";
+import { notifyDeploy, notifyClose, notifySwap } from "../core/telegram.js";
+import { USER_CONFIG_PATH } from "../lib/paths.js";
+>>>>>>> b07f384154085a851f82648b474583c02562a015
 
 // Registered by index.js so update_config can restart cron jobs when intervals change
 let _cronRestarter = null;
@@ -121,8 +135,13 @@ const toolMap = {
     }
     return { error: "invalid mode" };
   },
+<<<<<<< HEAD
   update_config: ({ changes, reason = "" }) => {
     // Flat key  config section mapping (covers everything in config.js)
+=======
+  update_config: async ({ changes, reason = "" }) => {
+    // Flat key → config section mapping (covers everything in config.js)
+>>>>>>> b07f384154085a851f82648b474583c02562a015
     const CONFIG_MAP = {
       // screening
       minFeeActiveTvlRatio: ["screening", "minFeeActiveTvlRatio"],
@@ -164,7 +183,6 @@ const toolMap = {
       screeningModel: ["llm", "screeningModel"],
       generalModel: ["llm", "generalModel"],
       // strategy
-      minBinStep: ["strategy", "minBinStep"],
       binsBelow: ["strategy", "binsBelow"],
     };
 
@@ -207,8 +225,13 @@ const toolMap = {
     // Restart cron jobs if intervals changed
     const intervalChanged = applied.managementIntervalMin != null || applied.screeningIntervalMin != null;
     if (intervalChanged && _cronRestarter) {
+<<<<<<< HEAD
       _cronRestarter();
       log("config", `Cron restarted  management: ${config.schedule.managementIntervalMin}m, screening: ${config.schedule.screeningIntervalMin}m`);
+=======
+      await _cronRestarter();
+      log("config", `Cron restarted — management: ${config.schedule.managementIntervalMin}m, screening: ${config.schedule.screeningIntervalMin}m`);
+>>>>>>> b07f384154085a851f82648b474583c02562a015
     }
 
     // Save as a lesson  but skip ephemeral per-deploy interval changes

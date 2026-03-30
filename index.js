@@ -1,4 +1,5 @@
 import "dotenv/config";
+<<<<<<< HEAD
 import cron from "node-cron";
 import readline from "readline";
 import { PublicKey } from "@solana/web3.js";
@@ -1050,3 +1051,8 @@ STARTUP CHECK
 }
 
 
+=======
+import { bootstrapRuntime } from "./core/runtime-bootstrap.js";
+
+await bootstrapRuntime();
+>>>>>>> b07f384154085a851f82648b474583c02562a015

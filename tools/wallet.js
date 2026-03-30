@@ -6,8 +6,13 @@ import {
   Keypair,
 } from "@solana/web3.js";
 import bs58 from "bs58";
+<<<<<<< HEAD
 import { log } from "../integrations/logger.js";
 import { config } from "../config.js";
+=======
+import { log } from "../lib/logger.js";
+import { config } from "../core/config.js";
+>>>>>>> b07f384154085a851f82648b474583c02562a015
 
 let _connection = null;
 let _wallet = null;

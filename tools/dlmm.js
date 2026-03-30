@@ -6,8 +6,13 @@ import {
 } from "@solana/web3.js";
 import BN from "bn.js";
 import bs58 from "bs58";
+<<<<<<< HEAD
 import { config } from "../config.js";
 import { log } from "../integrations/logger.js";
+=======
+import { config } from "../core/config.js";
+import { log } from "../lib/logger.js";
+>>>>>>> b07f384154085a851f82648b474583c02562a015
 import {
   trackPosition,
   markOutOfRange,
@@ -17,8 +22,13 @@ import {
   getTrackedPosition,
   minutesOutOfRange,
   syncOpenPositions,
+<<<<<<< HEAD
 } from "../storage/state.js";
 import { recordPerformance } from "../storage/lessons.js";
+=======
+} from "../lib/state.js";
+import { recordPerformance } from "../memory/lessons.js";
+>>>>>>> b07f384154085a851f82648b474583c02562a015
 import { normalizeMint } from "./wallet.js";
 
 //  Lazy SDK loader 
