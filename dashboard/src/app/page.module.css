@@ -5,9 +5,81 @@
   gap: 1.5rem;
 }
 
+.scopeBar {
+  display: flex;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding: 1.25rem 1.5rem;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 1rem;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(244, 247, 251, 0.92));
+}
+
+.scopeEyebrow {
+  margin: 0 0 0.35rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.scopeTitle {
+  margin: 0;
+  font-size: 1.35rem;
+  color: #0f172a;
+}
+
+.scopeHint {
+  margin: 0.45rem 0 0;
+  max-width: 44rem;
+  color: #475569;
+  line-height: 1.5;
+}
+
+.scopeLinks {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-content: flex-start;
+  gap: 0.65rem;
+}
+
+.scopeLink,
+.scopeLinkActive {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.4rem;
+  padding: 0.55rem 0.85rem;
+  border-radius: 999px;
+  text-decoration: none;
+  font-size: 0.92rem;
+  transition: all 0.18s ease;
+}
+
+.scopeLink {
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  color: #334155;
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.scopeLink:hover {
+  border-color: rgba(15, 23, 42, 0.22);
+  transform: translateY(-1px);
+}
+
+.scopeLinkActive {
+  color: white;
+  background: #0f172a;
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.16);
+}
+
 .middleRow {
   display: flex;
   gap: 1.5rem;
+}
+
+.runtimeRow {
+  display: flex;
 }
 
 .chartSection { flex: 2.2; }
@@ -22,5 +94,7 @@
 .activitySection { flex: 1; }
 
 @media (max-width: 1100px) {
+  .scopeBar { flex-direction: column; }
+  .scopeLinks { justify-content: flex-start; }
   .middleRow, .bottomRow { flex-direction: column; }
 }

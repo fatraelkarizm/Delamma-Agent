@@ -7,7 +7,11 @@ import {
 import BN from "bn.js";
 import bs58 from "bs58";
 import { config } from "../core/config.js";
+<<<<<<< HEAD
 import { log } from "../integrations/logger.js";
+=======
+import { log } from "../lib/logger.js";
+>>>>>>> b07f384154085a851f82648b474583c02562a015
 import {
   trackPosition,
   markOutOfRange,
@@ -17,8 +21,13 @@ import {
   getTrackedPosition,
   minutesOutOfRange,
   syncOpenPositions,
+<<<<<<< HEAD
 } from "../storage/state.js";
 import { recordPerformance } from "../storage/lessons.js";
+=======
+} from "../lib/state.js";
+import { recordPerformance } from "../memory/lessons.js";
+>>>>>>> b07f384154085a851f82648b474583c02562a015
 import { normalizeMint } from "./wallet.js";
 
 // ─── Lazy SDK loader ───────────────────────────────────────────

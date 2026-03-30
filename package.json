@@ -12,7 +12,16 @@
     "start": "node index.js",
     "dev": "node -e \"process.env.DRY_RUN='true'; import('./index.js');\"",
     "test:screen": "node test/test-screening.js",
+<<<<<<< HEAD
     "test:agent": "node -e \"process.env.DRY_RUN='true'; import('./test/test-agent.js');\"",
+=======
+    "test:agent": "DRY_RUN=true node test/test-agent.js",
+    "test:telegram-state": "node test/test-telegram-state.js",
+    "test:control-plane": "node test/test-control-plane-service.js",
+    "test:telegram-view": "node test/test-telegram-view-service.js",
+    "test:telegram-command": "node test/test-telegram-command-service.js",
+    "test:telegram-guards": "node test/test-telegram-runtime-guards.js",
+>>>>>>> b07f384154085a851f82648b474583c02562a015
     "postinstall": "node scripts/patch-anchor.js"
   },
   "dependencies": {
@@ -23,7 +32,8 @@
     "bs58": "^5.0.0",
     "dotenv": "^17.3.1",
     "node-cron": "^3.0.3",
-    "openai": "^4.73.0"
+    "openai": "^4.73.0",
+    "pg": "^8.20.0"
   },
   "engines": {
     "node": ">=18.0.0"

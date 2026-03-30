@@ -149,7 +149,11 @@ export async function getTokenHolders({ mint, limit = 20 }) {
 
   // ─── Smart Wallet / KOL Cross-reference ──────────────────────
   // Use targeted holders endpoint — only returns matching wallets, no noise
+<<<<<<< HEAD
   const { listSmartWallets } = await import("../storage/smart-wallets.js");
+=======
+  const { listSmartWallets } = await import("../memory/smart-wallets.js");
+>>>>>>> b07f384154085a851f82648b474583c02562a015
   const { wallets: smartWallets } = listSmartWallets();
   let smartWalletsHolding = [];
 
